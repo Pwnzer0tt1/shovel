@@ -502,13 +502,16 @@ class FlowList {
     await this.updateProtocolFilter(appProto)
     this.updateTagFilter(tags, filterTagsRequire, filterTagsDeny)
     await this.fillFlowsList(flows, tags)
-    this.updateActiveFlow(!fillTo)
+    //this.updateActiveFlow(!fillTo)
+    this.updateActiveFlow(fillTo ? true : false) 
   }
 }
 
 const flowList = new FlowList()
 flowList.init()
 
-setInterval(() => {
-  flowList.update()
-}, 5000) // Refresh flows every 5 seconds (5000)
+flowList.init().then(() => {
+  setInterval(() => {
+    flowList.update(false)
+  }, flowList.tickLength * 1000) // refresh every tickLength seconds (in milliseconds)
+})
