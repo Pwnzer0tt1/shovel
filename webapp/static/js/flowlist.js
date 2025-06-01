@@ -19,12 +19,12 @@ class FlowList {
         this.selectedFlowId = url.searchParams.get('flow')
 
         this.autoUpdateBtn = document.getElementById('autoUpdateBtn')
-        this.autoUpdateEnabled = this.autoUpdateBtn.textContent.includes('ON')
-        if (this.autoUpdateEnabled) {
-            this.autoUpdateBtn.classList.add('btn-success')
-        } else {
-            this.autoUpdateBtn.classList.add('btn-danger')
-        }
+        this.autoUpdateEnabled = localStorage.getItem('autoUpdateEnabled') !== null
+            ? localStorage.getItem('autoUpdateEnabled') === 'true'
+            : this.autoUpdateBtn.textContent.includes('ON')
+
+        this.autoUpdateBtn.textContent = `Auto-Update: ${this.autoUpdateEnabled ? 'ON' : 'OFF'}`
+        this.autoUpdateBtn.classList.add(this.autoUpdateEnabled ? 'btn-success' : 'btn-danger')
     }
 
     async init() {
@@ -244,7 +244,8 @@ class FlowList {
             this.autoUpdateEnabled = !this.autoUpdateEnabled
             console.log("Auto Update: ", this.autoUpdateEnabled)
 
-            e.currentTarget.textContent = `Auto-Update: ${this.autoUpdateEnabled ? 'ON' : 'OFF'} `
+            localStorage.setItem('autoUpdateEnabled', this.autoUpdateEnabled.toString())
+            e.currentTarget.textContent = `Auto-Update: ${this.autoUpdateEnabled ? 'ON' : 'OFF'}`
 
             // Change colour of button
             if (this.autoUpdateEnabled && this.tickLength > 0) {
@@ -255,7 +256,7 @@ class FlowList {
                 this.updatePreservingScroll(false)
                 this.autoUpdateInterval = setInterval(() => {
                     this.updatePreservingScroll(false)
-                }, this.tickLength * 100)
+                }, this.tickLength * 1000)
             } else {
                 e.currentTarget.classList.remove('btn-success')
                 e.currentTarget.classList.add('btn-danger')
@@ -569,6 +570,6 @@ flowList.init().then(() => {
         flowList.autoUpdateInterval = setInterval(() => {
             flowList.updatePreservingScroll(false)
             console.log("Updating flow list...")
-        }, flowList.tickLength * 100)
+        }, flowList.tickLength * 1000)
     }
 })
