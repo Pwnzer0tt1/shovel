@@ -508,3 +508,7 @@ class FlowList {
 
 const flowList = new FlowList()
 flowList.init()
+
+setInterval(() => {
+  flowList.update()
+}, 5000) // Refresh flows every 5 seconds (5000)
