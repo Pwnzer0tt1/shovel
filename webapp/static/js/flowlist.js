@@ -17,6 +17,14 @@ class FlowList {
         this.apiClient = new Api()
         const url = new URL(document.location)
         this.selectedFlowId = url.searchParams.get('flow')
+
+        this.autoUpdateBtn = document.getElementById('autoUpdateBtn')
+        this.autoUpdateEnabled = this.autoUpdateBtn.textContent.includes('ON')
+        if (this.autoUpdateEnabled) {
+            this.autoUpdateBtn.classList.add('btn-success')
+        } else {
+            this.autoUpdateBtn.classList.add('btn-danger')
+        }
     }
 
     async init() {
@@ -229,6 +237,34 @@ class FlowList {
             url.searchParams.set('to', e.currentTarget.dataset.ts)
             window.history.pushState(null, '', url.href)
             this.update()
+        })
+
+        // Handle auto update button click
+        document.getElementById('autoUpdateBtn').addEventListener('click', e => {
+            this.autoUpdateEnabled = !this.autoUpdateEnabled
+            console.log("Auto Update: ", this.autoUpdateEnabled)
+
+            e.currentTarget.textContent = `Auto-Update: ${this.autoUpdateEnabled ? 'ON' : 'OFF'} `
+
+            // Change colour of button
+            if (this.autoUpdateEnabled && this.tickLength > 0) {
+                e.currentTarget.classList.remove('btn-danger')
+                e.currentTarget.classList.add('btn-success')
+
+                // Start auto update
+                this.updatePreservingScroll(false)
+                this.autoUpdateInterval = setInterval(() => {
+                    this.updatePreservingScroll(false)
+                }, this.tickLength * 100)
+            } else {
+                e.currentTarget.classList.remove('btn-success')
+                e.currentTarget.classList.add('btn-danger')
+
+                if (this.autoUpdateInterval) {
+                    clearInterval(this.autoUpdateInterval)
+                    this.autoUpdateInterval = null
+                }
+            }
         })
 
         // Trigger initial flows list update
@@ -511,16 +547,28 @@ class FlowList {
         await this.updateProtocolFilter(appProto)
         this.updateTagFilter(tags, filterTagsRequire, filterTagsDeny)
         await this.fillFlowsList(flows, tags)
-        //this.updateActiveFlow(!fillTo)
-        this.updateActiveFlow(fillTo ? true : false)
+        this.updateActiveFlow(!fillTo)
     }
+
+    /**
+     * Aggiorna la flowlist mantenendo la posizione di scroll
+     */
+    async updatePreservingScroll(fillTo) {
+        const flowListEl = document.getElementById('flow-list')
+        const prevScrollTop = flowListEl.scrollTop
+        await this.update(fillTo)
+        flowListEl.scrollTop = prevScrollTop
+    }
+
 }
 
 const flowList = new FlowList()
-flowList.init()
 
 flowList.init().then(() => {
-    setInterval(() => {
-        flowList.update(false)
-    }, flowList.tickLength * 1000) // refresh every tickLength seconds (in milliseconds)
+    if (flowList.autoUpdateEnabled && flowList.tickLength > 0) {
+        flowList.autoUpdateInterval = setInterval(() => {
+            flowList.updatePreservingScroll(false)
+            console.log("Updating flow list...")
+        }, flowList.tickLength * 100)
+    }
 })
