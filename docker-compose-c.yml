@@ -41,7 +41,7 @@ services:
         ENTRYPOINT ["pcap-broker"]
     restart: always
     volumes:
-      - "~/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro"
+      - "~/.ssh/id_rsa:/root/.ssh/id_rsa:ro"
     environment:
       PCAP_COMMAND: |-
         ssh root@10.60.1.1 -oStrictHostKeyChecking=no

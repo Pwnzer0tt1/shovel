@@ -6,6 +6,7 @@ import base64
 import contextlib
 import json
 import time
+import os 
 
 import aiosqlite
 from starlette.applications import Starlette
@@ -16,6 +17,52 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
+
+SERVICES_CONFIG_FILE = "../services_config.json"
+
+def load_services_config():
+    """Load services configuration from JSON file"""
+    if os.path.exists(SERVICES_CONFIG_FILE):
+        with open(SERVICES_CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_services_config(services):
+    """Save services configuration to JSON file"""
+    with open(SERVICES_CONFIG_FILE, 'w') as f:
+        json.dump(services, f, indent=2)
+
+async def api_services_get(request):
+    """GET /api/services - Get list of services"""
+    return JSONResponse(CTF_CONFIG["services"])
+
+async def api_services_post(request):
+    """POST /api/services - Add or update a service"""
+    data = await request.json()
+    name = data.get("name")
+    ipports = data.get("ipports", [])
+    
+    if not name:
+        raise HTTPException(400, "Name is required")
+    
+    # Aggiorna configurazione in memoria
+    CTF_CONFIG["services"][name] = ipports
+    
+    # Salva su file per persistenza
+    save_services_config(CTF_CONFIG["services"])
+    
+    return JSONResponse({"ok": True, "service": name})
+
+async def api_services_delete(request):
+    """DELETE /api/services/{name} - Delete a service by name"""
+    name = request.path_params["name"]
+    
+    if name in CTF_CONFIG["services"]:
+        del CTF_CONFIG["services"][name]
+        save_services_config(CTF_CONFIG["services"])
+        return JSONResponse({"ok": True})
+    
+    raise HTTPException(404, "Servizio non trovato")
 
 
 def row_to_dict(row: aiosqlite.Row) -> dict:
@@ -311,7 +358,6 @@ async def lifespan(app):
     await eve_database.close()
     await payload_database.close()
 
-
 # Load configuration from environment variables, then .env file
 config = Config("../.env")
 DEBUG = config("DEBUG", cast=bool, default=False)
@@ -331,10 +377,16 @@ for name in service_names:
     ipports = config(f"CTF_SERVICE_{name.upper()}", cast=CommaSeparatedStrings)
     CTF_CONFIG["services"][name] = list(ipports)
 
+services_from_file = load_services_config()
+if services_from_file:
+    CTF_CONFIG["services"].update(services_from_file)
+
+
 # Define web application
 eve_database = None
 payload_database = None
 templates = Jinja2Templates(directory="templates")
+
 app = Starlette(
     debug=DEBUG,
     routes=[
@@ -344,12 +396,13 @@ app = Starlette(
         Route("/api/flow/{flow_id:int}/raw", api_flow_raw_get),
         Route("/api/replay-http/{flow_id:int}", api_replay_http),
         Route("/api/replay-raw/{flow_id:int}", api_replay_raw),
+        # API routes for services management
+        Route("/api/services", api_services_get, methods=["GET"]),
+        Route("/api/services", api_services_post, methods=["POST"]),
+        Route("/api/services/{name}", api_services_delete, methods=["DELETE"]),
         Mount("/static", StaticFiles(directory="static")),
         Mount("/input_pcaps", StaticFiles(directory="../input_pcaps", check_dir=False)),
-        Mount(
-            "/filestore",
-            StaticFiles(directory="../suricata/output/filestore", check_dir=False),
-        ),
+        Mount("/filestore", StaticFiles(directory="../suricata/output/filestore", check_dir=False)),
     ],
     lifespan=lifespan,
 )

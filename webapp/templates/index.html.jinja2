@@ -22,10 +22,18 @@
     <script type="module" src="static/js/flowlist.js"></script>
 
     <script type="module" src="static/js/flowlist.js"></script>
+    <script type="module" src="static/js/services-manager.js"></script>
 </head>
 
 <body class="h-100 bg-dark-subtle">
 <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+    <symbol id="funnel" viewBox="0 0 16 16">
+        <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5v-2z"></path>
+    </symbol>
+    <symbol id="gear" viewBox="0 0 16 16">
+        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+    </symbol>
     <symbol id="download" viewBox="0 0 16 16">
         <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1m-1 4v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 11.293V7.5a.5.5 0 0 1 1 0"></path>
     </symbol>
@@ -74,6 +82,11 @@
                     </optgroup>
                 {%- endfor %}
             </select>
+            <button class="btn btn-sm btn-outline-secondary rounded-0" data-bs-toggle="modal" data-bs-target="#servicesModal" title="Gestisci servizi">
+                <svg class="bi" width="16" height="16">
+                    <use xlink:href="#gear"></use>
+                </svg>
+            </button>
             <div class="dropend position-static border-start" id="dropdown-filter">
                 <button class="btn text-nowrap rounded-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <svg class="bi" width="16" height="16">
@@ -268,6 +281,30 @@
                          aria-labelledby="display-raw-hex-tab" tabindex="0"></pre>
                 </div>
             </section>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="servicesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Service manager</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Service name</label>
+                    <input type="text" class="form-control" id="serviceName" placeholder="es. web">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">IP:Port (one for row)</label>
+                    <textarea class="form-control" id="serviceIpPorts" rows="3" placeholder="192.168.1.10:80&#10;192.168.1.10:443"></textarea>
+                </div>
+                <button class="btn btn-primary">Add</button>
+            </div>
+            <div class="modal-footer">
+                <div id="servicesList" class="w-100"></div>
+            </div>
         </div>
     </div>
 </div>
