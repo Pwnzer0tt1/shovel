@@ -1,0 +1,26 @@
+# Copyright (C) 2024  ANSSI
+# SPDX-License-Identifier: CC0-1.0
+services:
+  suricata:
+    build: ./suricata
+    image: anssi/shovel-suricata:dev
+    volumes:
+      - "./input_pcaps:/input_pcaps:rw"
+      - "./suricata/rules:/suricata/rules:ro"
+      - "./suricata/output:/suricata/output:rw"
+
+    # Mode A: pcap replay mode (slower, for archives replay or rootless CTF)
+    # Add `--pcap-file-continuous` to watch for new pcap in folder.
+    command: -r /input_pcaps --pcap-file-continuous
+
+  webapp:
+    build: ./webapp
+    image: anssi/shovel-webapp:dev
+    restart: always
+    volumes:
+      - "./input_pcaps:/input_pcaps:ro" # remove to prevent users from downloading pcaps
+      - "./suricata/output:/suricata/output:rw"
+    ports:
+      - 127.0.0.1:8000:8000
+    env_file:
+      - .env

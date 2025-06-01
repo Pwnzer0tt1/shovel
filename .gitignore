@@ -7,8 +7,15 @@ suricata/output/*.db
 suricata/output/*.db-shm
 suricata/output/*.db-wal
 suricata/suricata-eve-sqlite-output/target
-.env
+
+# Configurazione
+#.env
 
 # Python
-__pycache__
+*/__pycache__
 .ruff_cache
+
+# General
+.idea
+.vscode
+.venv
