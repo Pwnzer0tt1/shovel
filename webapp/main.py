@@ -22,7 +22,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
-SERVICES_CONFIG_FILE = "../services_config.json"
+SERVICES_CONFIG_FILE = "./services_config.json"
 
 @contextlib.contextmanager
 def file_lock(file_path):
@@ -103,14 +103,13 @@ async def api_services_post(request):
     """POST /api/services - Add or update a service"""
     data = await request.json()
     name = data.get("name")
-    old_name = data.get("old_name")  # Nome precedente per la modifica
+    old_name = data.get("old_name")
     ipports = data.get("ipports", [])
     color = data.get("color", "#007bff")  # default blue
 
     if not name:
         raise HTTPException(400, "Name is required")
 
-    # Se è una modifica del nome e il vecchio nome esiste, rimuovilo
     if old_name and old_name != name and old_name in CTF_CONFIG["services"]:
         del CTF_CONFIG["services"][old_name]
 

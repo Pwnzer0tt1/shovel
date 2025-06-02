@@ -25,6 +25,7 @@ services:
     volumes:
       - "./input_pcaps:/input_pcaps:ro" # remove to prevent users from downloading pcaps
       - "./suricata/output:/suricata/output:rw"
+      - "./services_config.json:/app/services_config.json:rw"
     ports:
       - 0.0.0.0:8000:8000
     env_file:
