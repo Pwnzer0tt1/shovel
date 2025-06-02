@@ -297,10 +297,16 @@
                     <input type="text" class="form-control" id="serviceName" placeholder="es. web">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">IP:Port (one for row)</label>
-                    <textarea class="form-control" id="serviceIpPorts" rows="3" placeholder="192.168.1.10:80&#10;192.168.1.10:443"></textarea>
+                    <label class="form-label">Target IP</label>
+                    <input type="text" class="form-control" id="serviceIP" value="{{ ctf_config.default_ip }}" readonly>
+                    <div class="form-text">IP automatically extracted from PCAP command: {{ ctf_config.default_ip }}</div>
                 </div>
-                <button class="btn btn-primary">Add</button>
+                <div class="mb-3">
+                    <label class="form-label">Ports (one per line)</label>
+                    <textarea class="form-control" id="servicePorts" rows="3" placeholder="80&#10;443&#10;8080"></textarea>
+                    <div class="form-text">Insert only port numbers</div>
+                </div>
+                <button class="btn btn-primary">Add/Modify</button>
             </div>
             <div class="modal-footer">
                 <div id="servicesList" class="w-100"></div>

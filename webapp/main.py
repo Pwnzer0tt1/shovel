@@ -7,6 +7,7 @@ import contextlib
 import json
 import time
 import os 
+import re
 
 import aiosqlite
 from starlette.applications import Starlette
@@ -19,6 +20,25 @@ from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
 SERVICES_CONFIG_FILE = "../services_config.json"
+
+def extract_ip_from_pcap_command():
+    """Estrae l'IP dalla variabile d'ambiente o fallback"""
+    
+    # Prova prima la variabile d'ambiente dedicata
+    target_ip = config("TARGET_IP", cast=str, default="")
+    if target_ip:
+        return target_ip
+    
+    # Prova dal comando PCAP (se disponibile)
+    pcap_command = config("PCAP_COMMAND", cast=str, default="")
+    if pcap_command:
+        # Cerca "ssh root@IP"
+        ip_match = re.search(r'ssh\s+\w+@([\d.]+)', pcap_command)
+        if ip_match:
+            return ip_match.group(1)
+    
+    # Fallback finale
+    return "10.60.2.1"
 
 def load_services_config():
     """Load services configuration from JSON file"""
@@ -370,6 +390,7 @@ PAYLOAD_DB_URI = config(
 CTF_CONFIG = {
     "start_date": config("CTF_START_DATE", cast=str, default="1970-01-01T00:00+00:00"),
     "tick_length": config("CTF_TICK_LENGTH", cast=int, default=0),
+    "default_ip": extract_ip_from_pcap_command(),  # IP estratto automaticamente
     "services": {},
 }
 service_names = config("CTF_SERVICES", cast=CommaSeparatedStrings, default=[])

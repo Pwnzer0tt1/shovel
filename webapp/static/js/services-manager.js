@@ -18,16 +18,27 @@ class ServicesManager {
 
     async addService() {
         const name = document.getElementById('serviceName').value.trim()
-        const ipPortsText = document.getElementById('serviceIpPorts').value.trim()
+        const ip = document.getElementById('serviceIP').value.trim()  // NUOVO: IP fisso
+        const portsText = document.getElementById('servicePorts').value.trim()  // NUOVO: solo porte
         
         if (!name) {
             alert('Insert a service name')
             return
         }
 
-        const ipports = ipPortsText.split('\n')
+        // Processa solo le porte (numeri)
+        const ports = portsText.split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0)
+            .filter(port => /^\d+$/.test(port)) // Solo numeri
+
+        if (ports.length === 0) {
+            alert('Insert at least one valid port')
+            return
+        }
+
+        // Combina IP fisso + porte
+        const ipports = ports.map(port => `${ip}:${port}`)
 
         try {
             const response = await fetch('/api/services', {
@@ -38,7 +49,7 @@ class ServicesManager {
 
             if (response.ok) {
                 document.getElementById('serviceName').value = ''
-                document.getElementById('serviceIpPorts').value = ''
+                document.getElementById('servicePorts').value = ''  // NUOVO campo
                 await this.loadServices()
             } else {
                 alert('Error in saving service')
@@ -148,38 +159,46 @@ class ServicesManager {
 }
 
     editService(name) {
+        const ipports = this.services[name]
+        
         document.getElementById('serviceName').value = name
-        document.getElementById('serviceIpPorts').value = this.services[name].join('\n')
+        
+        const ports = ipports.map(ipport => {
+            const parts = ipport.split(':')
+            return parts[parts.length - 1]
+        })
+        
+        document.getElementById('servicePorts').value = ports.join('\n')
     }
 }
 
-// Inizializza il manager dei servizi
+// Inizialize the ServicesManager instance
 const servicesManager = new ServicesManager()
 
 document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('servicesModal')
     if (modal) {
-        // Carica servizi quando si apre la modale
+        // Load services when the modal is shown
         modal.addEventListener('show.bs.modal', () => {
             servicesManager.loadServices()
         })
         
-        // Collega il bottone Aggiungi/Modifica
+        // Link the "Add Service" button to the addService method
         const addButton = modal.querySelector('.btn-primary')
         if (addButton) {
             addButton.addEventListener('click', () => servicesManager.addService())
         }
         
-        // Usa delegazione eventi per i bottoni (creati dinamicamente)
+        // Use the modal's form submit event to prevent default submission
         const servicesList = document.getElementById('servicesList')
         if (servicesList) {
             servicesList.addEventListener('click', (e) => {
-                // Bottone elimina
+                // deletion button
                 if (e.target.closest('.delete-service-btn')) {
                     const serviceName = e.target.closest('.delete-service-btn').dataset.serviceName
                     servicesManager.deleteService(serviceName)
                 }
-                // Bottone modifica
+                // modification button
                 else if (e.target.closest('.edit-service-btn')) {
                     const serviceName = e.target.closest('.edit-service-btn').dataset.serviceName
                     servicesManager.editService(serviceName)

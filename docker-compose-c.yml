@@ -44,6 +44,6 @@ services:
       - "~/.ssh/id_rsa:/root/.ssh/id_rsa:ro"
     environment:
       PCAP_COMMAND: |-
-        ssh root@10.60.1.1 -oStrictHostKeyChecking=no
+        ssh root@10.60.2.1 -oStrictHostKeyChecking=no
         tcpdump -U --immediate-mode -ni game -s 65535 -w - not tcp port 22
       LISTEN_ADDRESS: 0.0.0.0:4242
