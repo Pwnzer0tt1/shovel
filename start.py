@@ -8,8 +8,8 @@ import re
 from datetime import datetime
 
 
-def update_env_file(target_ip=None, start_date=None):
-    """Update the TARGET_IP and/or CTF_START_DATE in the .env file."""
+def update_env(target_ip=None, start_date=None):
+    """Update the TARGET_IP and/or CTF_START_DATE in the .env file"""
     env_file = ".env"
     if not os.path.exists(env_file):
         print(f"Warning: {env_file} file not found. Creating new file.")
@@ -74,7 +74,7 @@ def validate_date_format(date_str):
         return False
 
 
-def update_compose_c_file(target_ip):
+def update_compose(target_ip):
     """Update the SSH target IP in the docker-compose-c.yml file."""
     compose_file = "docker-compose-c.yml"
 
@@ -116,22 +116,11 @@ def main():
 
     args = parser.parse_args()
 
-    # Validate start date format if provided
-    if args.start_date and not validate_date_format(args.start_date):
-        print(f"[-] Invalid start date format: {args.start_date}")
-        print("    Please use ISO format: YYYY-MM-DDThh:mm (e.g. 2025-06-01T17:30)")
-        print("    Timezone +02:00 will be added automatically if not specified")
-        sys.exit(1)
-
     # Mode C as default if no mode is specified
     use_mode_c = not (args.mode_a or args.mode_b) or args.mode_c
 
-    # Update CTF start date if specified (independent of mode)
-    if args.start_date:
-        print(f"[+] Updating CTF start date to: {args.start_date}")
-        update_env_file(start_date=args.start_date)
-
     # Select the appropriate docker-compose file based on the mode
+    compose_file = "docker-compose-c.yml"
     if args.mode_a:
         compose_file = "docker-compose-a.yml"
         print("[+] Starting in mode A (pcap replay)...")
@@ -141,37 +130,49 @@ def main():
     elif use_mode_c:
         compose_file = "docker-compose-c.yml"
 
-    # Build the docker compose command
     cmd = ["docker", "compose", "-f", compose_file]
 
-    if args.down:
+    # If --down or --build is specified, stop the containers first
+    if args.down or args.build:
         down_cmd = cmd + ["down"]
         print(f"[+] Executing: {' '.join(down_cmd)}\n")
         subprocess.run(down_cmd, check=True)
+
+        print("\n[+] Containers successfully stopped!\n")
+        if args.down and not args.build:
+            sys.exit(0)
+
+    if use_mode_c:
+        if not args.target_ip:
+            print("[-] No target IP specified for mode C. Please provide --target-ip (or -ip) option.")
+            sys.exit(1)
+
+        # Validate start date format if provided
+        if args.start_date and not validate_date_format(args.start_date):
+            print(f"[-] Invalid start date format: {args.start_date}")
+            print("    Please use ISO format: YYYY-MM-DDThh:mm (e.g. 2025-06-01T17:30)")
+            print("    Timezone +02:00 will be added automatically if not specified")
+            sys.exit(1)
+
+        print("[+] Starting in mode C (PCAP-over-IP)...")
+
+        # If target IP and date are specified, update '.env' and 'docker-compose-c.yml'
+        update_env(target_ip=args.target_ip, start_date=args.start_date)
+        update_compose(args.target_ip)
+
+    if args.build:
+        cmd.append("up")
+        cmd.append("--build")
     else:
-        if use_mode_c:
-            # If target IP is specified, update both the .env file and docker-compose-c.yml
-            if args.target_ip:
-                print("[+] Starting in mode C (PCAP-over-IP)...")
-                update_env_file(target_ip=args.target_ip)
-                update_compose_c_file(args.target_ip)
-            else:
-                print("[-] No target IP specified for mode C. Please provide --target-ip (or -ip) option.")
-                sys.exit(1)
+        cmd.append("up")
 
-        if args.build:
-            cmd.append("up")
-            cmd.append("--build")
-        else:
-            cmd.append("up")
+    cmd.append("-d")
 
-        cmd.append("-d")
+    print(f"\n[+] Executing: {' '.join(cmd)}\n")
+    subprocess.run(cmd, check=True)
 
-        print(f"\n[+] Executing: {' '.join(cmd)}\n")
-        subprocess.run(cmd, check=True)
-
-        print(f"\n[+] Shovel successfully started in mode {'A' if args.mode_a else 'B' if args.mode_b else 'C'}!")
-        print(f"    Web interface is available at: http://127.0.0.1:8000")
+    print(f"\n[+] Shovel successfully started in mode {'A' if args.mode_a else 'B' if args.mode_b else 'C'}!")
+    print(f"    Web interface is available at: http://127.0.0.1:8000")
 
 
 if __name__ == "__main__":
