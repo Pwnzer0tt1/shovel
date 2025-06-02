@@ -297,13 +297,26 @@ class FlowList {
      * @returns Pretty string representation
      */
     pprintService(ipport) {
-        // Find name using service filter dataset
-        const name = document.querySelector(`select#services-select optgroup[data-ipports~='${ipport}']`)?.label
+        const optgroup = document.querySelector(`select#services-select optgroup[data-ipports~='${ipport}']`)
+        const name = optgroup?.label
+        const color = optgroup?.dataset.color || '#6c757d'
         const port = ipport.split(':').slice(-1)
+        
+        if (window.servicesManager && window.servicesManager.services) {
+            const serviceColor = window.servicesManager.getServiceColor(ipport)
+            if (serviceColor !== '#6c757d') {
+                if (name) {
+                    return `<span style="color: ${serviceColor}; font-weight: bold;">${name}</span> (:${port})`
+                } else {
+                    return `<span style="color: ${serviceColor};">${ipport}</span>`
+                }
+            }
+        }
+        
         if (name) {
-            return `${name} (:${port})`
+            return `<span style="color: ${color}; font-weight: bold;">${name}</span> (:${port})`
         } else {
-            return ipport
+            return `<span style="color: #6c757d;">${ipport}</span>`
         }
     }
 
@@ -440,7 +453,7 @@ class FlowList {
             const flowInfoDiv = document.createElement('div')
             flowInfoDiv.classList.add('d-flex', 'justify-content-between', 'mb-1')
             const flowInfoDiv1 = document.createElement('small')
-            flowInfoDiv1.textContent = this.pprintService(flow.dest_ipport)
+            flowInfoDiv1.innerHTML = this.pprintService(flow.dest_ipport)
             const flowInfoDiv2 = document.createElement('small')
             flowInfoDiv2.textContent = `${this.pprintDelay(flow.ts_end - flow.ts_start)}, ${startDate}`
             flowInfoDiv.appendChild(flowInfoDiv1)

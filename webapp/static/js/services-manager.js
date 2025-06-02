@@ -18,8 +18,9 @@ class ServicesManager {
 
     async addService() {
         const name = document.getElementById('serviceName').value.trim()
-        const ip = document.getElementById('serviceIP').value.trim()  // Fixed IP
+        const ip = document.getElementById('serviceIP').value.trim()
         const portsText = document.getElementById('servicePorts').value.trim()
+        const color = document.getElementById('serviceColor').value
 
         if (!name) {
             alert('Insert a service name')
@@ -43,12 +44,11 @@ class ServicesManager {
             const response = await fetch('/api/services', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, ipports})
+                body: JSON.stringify({name, ipports, color})
             })
 
             if (response.ok) {
-                document.getElementById('serviceName').value = ''
-                document.getElementById('servicePorts').value = ''
+                this.resetForm()
                 await this.loadServices()
             } else {
                 alert('Error in saving service')
@@ -88,10 +88,14 @@ class ServicesManager {
         select.innerHTML = ''
         optionsToKeep.forEach(opt => select.appendChild(opt))
 
-        Object.entries(this.services).forEach(([name, ipports]) => {
+        Object.entries(this.services).forEach(([name, serviceData]) => {
+            const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+            const color = serviceData.color || '#007bff'
+            
             const optgroup = document.createElement('optgroup')
             optgroup.label = name
             optgroup.dataset.ipports = ipports.join(' ')
+            optgroup.dataset.color = color // Add color 
 
             if (ipports.length > 1) {
                 const allOption = document.createElement('option')
@@ -113,6 +117,16 @@ class ServicesManager {
         select.value = currentValue
     }
 
+    getServiceColor(ipport) {
+        for (const [name, serviceData] of Object.entries(this.services)) {
+            const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+            if (ipports.includes(ipport)) {
+                return serviceData.color || '#007bff'
+            }
+        }
+        return '#6c757d'
+    }
+
     updateServicesList() {
         const container = document.getElementById('servicesList')
         if (!container) return
@@ -124,7 +138,10 @@ class ServicesManager {
             return
         }
 
-        Object.entries(this.services).forEach(([name, ipports]) => {
+        Object.entries(this.services).forEach(([name, serviceData]) => {
+            const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+            const color = serviceData.color || '#007bff'
+            
             const serviceDiv = document.createElement('div')
             serviceDiv.className = 'card mb-2 border-0 shadow-sm'
 
@@ -133,7 +150,10 @@ class ServicesManager {
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
-                        <h6 class="card-title mb-1 text-light">${name}</h6>
+                        <h6 class="card-title mb-1 text-light d-flex align-items-center">
+                            <span class="badge me-2" style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%;"></span>
+                            ${name}
+                        </h6>
                         <div class="text-muted small">
                             ${ipports.map(ip => `<span class="badge bg-light text-dark border me-1 mb-1">${ip}</span>`).join('')}
                         </div>
@@ -157,10 +177,29 @@ class ServicesManager {
         })
     }
 
+    generateRandomColor() {
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+            '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+            '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA',
+            '#F1948A', '#85C1E9', '#F4D03F', '#AED6F1'
+        ]
+        return colors[Math.floor(Math.random() * colors.length)]
+    }
+
+    resetForm() {
+        document.getElementById('serviceName').value = ''
+        document.getElementById('servicePorts').value = ''
+        document.getElementById('serviceColor').value = this.generateRandomColor()
+    }
+
     editService(name) {
-        const ipports = this.services[name]
+        const serviceData = this.services[name]
+        const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+        const color = serviceData.color || '#007bff'
         
         document.getElementById('serviceName').value = name
+        document.getElementById('serviceColor').value = color
         
         const ports = ipports.map(ipport => {
             const parts = ipport.split(':')
@@ -173,13 +212,16 @@ class ServicesManager {
 
 // Inizialize the ServicesManager instance
 const servicesManager = new ServicesManager()
+window.servicesManager = servicesManager
 
 document.addEventListener('DOMContentLoaded', () => {
+    servicesManager.loadServices()
     const modal = document.getElementById('servicesModal')
     if (modal) {
         // Load services when the modal is shown
         modal.addEventListener('show.bs.modal', () => {
             servicesManager.loadServices()
+            servicesManager.resetForm() // Reset del form quando si apre il modal
         })
 
         // Link the "Add Service" button to the addService method

@@ -24,27 +24,27 @@ SERVICES_CONFIG_FILE = "../services_config.json"
 def extract_ip_from_pcap_command():
     """Estrae l'IP dalla variabile d'ambiente o fallback"""
     
-    # Prova prima la variabile d'ambiente dedicata
     target_ip = config("TARGET_IP", cast=str, default="")
     if target_ip:
         return target_ip
     
-    # Prova dal comando PCAP (se disponibile)
     pcap_command = config("PCAP_COMMAND", cast=str, default="")
     if pcap_command:
-        # Cerca "ssh root@IP"
         ip_match = re.search(r'ssh\s+\w+@([\d.]+)', pcap_command)
         if ip_match:
             return ip_match.group(1)
     
-    # Fallback finale
     return "10.60.2.1"
 
 def load_services_config():
     """Load services configuration from JSON file"""
     if os.path.exists(SERVICES_CONFIG_FILE):
         with open(SERVICES_CONFIG_FILE, 'r') as f:
-            return json.load(f)
+            services = json.load(f)
+            for k, v in list(services.items()):
+                if isinstance(v, list):
+                    services[k] = {"ipports": v, "color": "#007bff"}
+            return services
     return {}
 
 def save_services_config(services):
@@ -61,16 +61,18 @@ async def api_services_post(request):
     data = await request.json()
     name = data.get("name")
     ipports = data.get("ipports", [])
-    
+    color = data.get("color", "#007bff")  # default blue
+
     if not name:
         raise HTTPException(400, "Name is required")
-    
-    # Aggiorna configurazione in memoria
-    CTF_CONFIG["services"][name] = ipports
-    
-    # Salva su file per persistenza
+
+    CTF_CONFIG["services"][name] = {
+        "ipports": ipports,
+        "color": color
+    }
+
     save_services_config(CTF_CONFIG["services"])
-    
+
     return JSONResponse({"ok": True, "service": name})
 
 async def api_services_delete(request):
@@ -390,7 +392,7 @@ PAYLOAD_DB_URI = config(
 CTF_CONFIG = {
     "start_date": config("CTF_START_DATE", cast=str, default="1970-01-01T00:00+00:00"),
     "tick_length": config("CTF_TICK_LENGTH", cast=int, default=0),
-    "default_ip": extract_ip_from_pcap_command(),  # IP estratto automaticamente
+    "default_ip": extract_ip_from_pcap_command(),
     "services": {},
 }
 service_names = config("CTF_SERVICES", cast=CommaSeparatedStrings, default=[])
