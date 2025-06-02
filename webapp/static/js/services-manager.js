@@ -149,6 +149,17 @@ class ServicesManager {
         select.value = currentValue
     }
 
+    getServiceBadge(ipport) {
+        for (const [name, serviceData] of Object.entries(this.services)) {
+            const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+            if (ipports.includes(ipport)) {
+                const color = serviceData.color || '#007bff'
+                return `<span class="service-badge" style="background-color: ${color}">${name}</span>`
+            }
+        }
+        return `<span class="service-badge" style="background-color: #6c757d">Unknown</span>`
+    }
+
     getServiceColor(ipport) {
         for (const [name, serviceData] of Object.entries(this.services)) {
             const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
@@ -353,6 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('servicePorts').value = ''
             servicesManager.resetAddButton()
             servicesManager.restoreEditButton()
+            
+            window.location.reload()
         })
 
         // Link the "Add Service" button to the addService method

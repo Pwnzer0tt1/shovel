@@ -306,17 +306,17 @@ class FlowList {
             const serviceColor = window.servicesManager.getServiceColor(ipport)
             if (serviceColor !== '#6c757d') {
                 if (name) {
-                    return `<span style="color: ${serviceColor}; font-weight: bold;">${name}</span> (:${port})`
+                    return `<span class="service-badge" style="background-color: ${serviceColor}">${name}</span> (:${port})`
                 } else {
-                    return `<span style="color: ${serviceColor};">${ipport}</span>`
+                    return `<span class="service-badge" style="background-color: ${serviceColor}">${ipport}</span>`
                 }
             }
         }
         
         if (name) {
-            return `<span style="color: ${color}; font-weight: bold;">${name}</span> (:${port})`
+            return `<span class="service-badge" style="background-color: ${color}">${name}</span> (:${port})`
         } else {
-            return `<span style="color: #6c757d;">${ipport}</span>`
+            return `<span class="service-badge" style="background-color: #6c757d">${ipport}</span>`
         }
     }
 
