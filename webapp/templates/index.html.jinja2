@@ -82,7 +82,8 @@
                     </optgroup>
                 {%- endfor %}
             </select>
-            <button class="btn btn-sm btn-outline-secondary rounded-0" data-bs-toggle="modal" data-bs-target="#servicesModal" title="Gestisci servizi">
+            <button class="btn btn-sm btn-outline-secondary rounded-0" data-bs-toggle="modal"
+                    data-bs-target="#servicesModal" title="Customize services">
                 <svg class="bi" width="16" height="16">
                     <use xlink:href="#gear"></use>
                 </svg>
@@ -259,7 +260,7 @@
                            href="#display-raw-collapse" role="button" aria-expanded="true"
                            aria-controls="display-raw-collapse">
                             <svg class="bi me-2" width="16" height="16">
-                                <use xlink:href="#chevron-down"/>
+                                <use xlink:href="#chevron-down"></use>
                             </svg>
                             Raw data
                         </a>
@@ -288,7 +289,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Service manager</h5>
+                <h5 class="modal-title">Service Manager</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -297,18 +298,22 @@
                     <input type="text" class="form-control" id="serviceName" placeholder="es. web">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Target IP</label>
+                    <label class="form-label">Target IP
+                        <span class="form-text">(auto-extracted from PCAP: {{ ctf_config.default_ip }})</span>
+                    </label>
                     <input type="text" class="form-control" id="serviceIP" value="{{ ctf_config.default_ip }}" readonly>
-                    <div class="form-text">IP automatically extracted from PCAP command: {{ ctf_config.default_ip }}</div>
+                    {#                    <div class="form-text">IP automatically extracted from PCAP#}
+                    {#                        command: {{ ctf_config.default_ip }}</div>#}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Ports (one per line)</label>
-                    <textarea class="form-control" id="servicePorts" rows="3" placeholder="80&#10;443&#10;8080"></textarea>
+                    <label class="form-label">Ports <span class="form-text">(one per line)</span></label>
+                    <textarea class="form-control" id="servicePorts" rows="3"
+                              placeholder="80&#10;443&#10;8080"></textarea>
                     <div class="form-text">Insert only port numbers</div>
                 </div>
-                <button class="btn btn-primary">Add/Modify</button>
+                <button class="btn btn-primary w-100">Add/Modify</button>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer mb-0">
                 <div id="servicesList" class="w-100"></div>
             </div>
         </div>
