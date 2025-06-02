@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (C) 2024  ANSSI
-# SPDX-License-Identifier: CC0-1.0
-
 import argparse
 import argcomplete
 import os
@@ -19,8 +16,11 @@ def update_env_file(target_ip=None, start_date=None):
         with open(env_file, "w") as f:
             content = ""
             if start_date:
-                content += f"CTF_START_DATE={start_date}"
-                content += "+02:00\n"
+                # Ensure date has timezone information
+                if not ('+' in start_date or '-' in start_date[10:]):
+                    content += f"CTF_START_DATE={start_date}+02:00\n"
+                else:
+                    content += f"CTF_START_DATE={start_date}\n"
             if target_ip:
                 content += f"TARGET_IP={target_ip}\n"
             f.write(content)
@@ -31,11 +31,17 @@ def update_env_file(target_ip=None, start_date=None):
 
     # Update CTF_START_DATE if provided
     if start_date:
-        if "CTF_START_DATE=" in content:
-            content = re.sub(r"CTF_START_DATE=.*", f"CTF_START_DATE={start_date}", content)
+        # Ensure date has timezone information
+        if not ('+' in start_date or '-' in start_date[10:]):
+            formatted_date = f"{start_date}+02:00"
         else:
-            content += f"\nCTF_START_DATE={start_date}\n"
-        print(f"     > Updated CTF_START_DATE to {start_date} in {env_file}")
+            formatted_date = start_date
+
+        if "CTF_START_DATE=" in content:
+            content = re.sub(r"CTF_START_DATE=.*", f"CTF_START_DATE={formatted_date}", content)
+        else:
+            content += f"\nCTF_START_DATE={formatted_date}\n"
+        print(f"     > Updated CTF_START_DATE to {formatted_date} in {env_file}")
 
     # Update TARGET_IP if provided
     if target_ip:
@@ -52,8 +58,17 @@ def update_env_file(target_ip=None, start_date=None):
 def validate_date_format(date_str):
     """Validate the date string to be written in the correct format."""
     try:
+        # Check basic format first
+        if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(([+-]\d{2}:\d{2})|Z)?$", date_str):
+            return False
+
+        # If no timezone is specified, we'll add +02:00 later
+        test_date = date_str
+        if not ('+' in date_str or '-' in date_str[10:] or date_str.endswith('Z')):
+            test_date = f"{date_str}+02:00"
+
         # Try to parse the date in ISO format
-        datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        datetime.fromisoformat(test_date.replace('Z', '+00:00'))
         return True
     except ValueError:
         return False
@@ -93,8 +108,8 @@ def main():
     parser.add_argument("--down", action="store_true", help="Stop containers before starting them")
     parser.add_argument("--build", "-b", dest="build", action="store_true", help="Rebuild images before starting them")
     parser.add_argument("--target-ip", "-ip", dest="target_ip", help="Specify target machine IP address (for mode C)")
-    parser.add_argument("--start-date", "-date", dest="start_date",
-                        help="Specify CTF start date (format: YYYY-MM-DDThh:mm)")
+    parser.add_argument("--date", dest="start_date",
+                        help="Specify CTF start date (format: YYYY-MM-DDThh:mm, timezone +02:00 added if not specified)")
 
     if 'argcomplete' in sys.modules:
         argcomplete.autocomplete(parser)
@@ -105,6 +120,7 @@ def main():
     if args.start_date and not validate_date_format(args.start_date):
         print(f"[-] Invalid start date format: {args.start_date}")
         print("    Please use ISO format: YYYY-MM-DDThh:mm (e.g. 2025-06-01T17:30)")
+        print("    Timezone +02:00 will be added automatically if not specified")
         sys.exit(1)
 
     # Mode C as default if no mode is specified
@@ -125,24 +141,24 @@ def main():
     elif use_mode_c:
         compose_file = "docker-compose-c.yml"
 
-        # If target IP is specified, update both the .env file and docker-compose-c.yml
-        if args.target_ip:
-            print("[+] Starting in mode C (PCAP-over-IP)...")
-            update_env_file(target_ip=args.target_ip)
-            update_compose_c_file(args.target_ip)
-        else:
-            print("[-] No target IP specified for mode C. Please provide --target-ip (or -ip) option.")
-            sys.exit(1)
-
     # Build the docker compose command
     cmd = ["docker", "compose", "-f", compose_file]
 
-    # If requested, stop the containers
     if args.down:
         down_cmd = cmd + ["down"]
         print(f"[+] Executing: {' '.join(down_cmd)}\n")
         subprocess.run(down_cmd, check=True)
     else:
+        if use_mode_c:
+            # If target IP is specified, update both the .env file and docker-compose-c.yml
+            if args.target_ip:
+                print("[+] Starting in mode C (PCAP-over-IP)...")
+                update_env_file(target_ip=args.target_ip)
+                update_compose_c_file(args.target_ip)
+            else:
+                print("[-] No target IP specified for mode C. Please provide --target-ip (or -ip) option.")
+                sys.exit(1)
+
         if args.build:
             cmd.append("up")
             cmd.append("--build")
