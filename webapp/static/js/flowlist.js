@@ -577,12 +577,24 @@ class FlowList {
 }
 
 const flowList = new FlowList()
+window.flowList = flowList
 
-flowList.init().then(() => {
+const initFlowList = async () => {
+    // Wait for services manager to be available
+    if (window.servicesManager && !window.servicesManager.isLoaded) {
+        await new Promise(resolve => {
+            window.addEventListener('servicesLoaded', resolve, { once: true })
+        })
+    }
+    
+    await flowList.init()
+    
     if (flowList.autoUpdateEnabled && flowList.tickLength > 0) {
         flowList.autoUpdateInterval = setInterval(() => {
             flowList.updatePreservingScroll(false)
             console.log("Updating flow list...")
         }, flowList.tickLength * 1000)
     }
-})
+}
+
+initFlowList()

@@ -4,14 +4,17 @@ class ServicesManager {
     constructor() {
         this.services = {}
         this.currentEditButton = null
+        this.isLoaded = false
     }
 
     async loadServices() {
         try {
             const response = await fetch('/api/services')
             this.services = await response.json()
+            this.isLoaded = true
             this.updateServicesSelect()
             this.updateServicesList()
+            window.dispatchEvent(new CustomEvent('servicesLoaded'))
         } catch (error) {
             console.error('Error loading services:', error)
         }
@@ -150,6 +153,9 @@ class ServicesManager {
     }
 
     getServiceBadge(ipport) {
+        if (!this.isLoaded) {
+            return `<span class="service-badge" style="background-color: #6c757d">Loading...</span>`
+        }
         for (const [name, serviceData] of Object.entries(this.services)) {
             const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
             if (ipports.includes(ipport)) {
@@ -161,6 +167,9 @@ class ServicesManager {
     }
 
     getServiceColor(ipport) {
+        if (!this.isLoaded) {
+            return '#6c757d'
+        }
         for (const [name, serviceData] of Object.entries(this.services)) {
             const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
             if (ipports.includes(ipport)) {
@@ -350,7 +359,12 @@ const servicesManager = new ServicesManager()
 window.servicesManager = servicesManager
 
 document.addEventListener('DOMContentLoaded', () => {
-    servicesManager.loadServices()
+    servicesManager.loadServices().then(() => {
+        // Ensure flow list updates after services are loaded
+        if (window.flowList) {
+            window.flowList.update()
+        }
+    })
     const modal = document.getElementById('servicesModal')
     if (modal) {
         // Load services when the modal is shown
@@ -365,7 +379,9 @@ document.addEventListener('DOMContentLoaded', () => {
             servicesManager.resetAddButton()
             servicesManager.restoreEditButton()
             
-            window.location.reload()
+            servicesManager.loadServices().then(() => {
+                window.location.reload()
+            })
         })
 
         // Link the "Add Service" button to the addService method
