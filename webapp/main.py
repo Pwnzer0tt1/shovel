@@ -9,6 +9,9 @@ import time
 import os 
 import re
 
+import fcntl
+import random
+
 import aiosqlite
 from starlette.applications import Starlette
 from starlette.config import Config
@@ -20,6 +23,25 @@ from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
 SERVICES_CONFIG_FILE = "../services_config.json"
+
+@contextlib.contextmanager
+def file_lock(file_path):
+    """Context manager per file locking semplice"""
+    lock_file_path = f"{file_path}.lock"
+    lock_file = None
+    
+    try:
+        lock_file = open(lock_file_path, "w")
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)  # Lock Blocking
+        yield
+    finally:
+        if lock_file:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                lock_file.close()
+                os.unlink(lock_file_path)
+            except:
+                pass
 
 def extract_ip_from_pcap_command():
     """Estrae l'IP dalla variabile d'ambiente o fallback"""
@@ -37,20 +59,41 @@ def extract_ip_from_pcap_command():
     return "10.60.2.1"
 
 def load_services_config():
-    """Load services configuration from JSON file"""
-    if os.path.exists(SERVICES_CONFIG_FILE):
-        with open(SERVICES_CONFIG_FILE, 'r') as f:
-            services = json.load(f)
+    """Load services configuration from JSON file with file locking"""
+    if not os.path.exists(SERVICES_CONFIG_FILE):
+        return {}
+    
+    with file_lock(SERVICES_CONFIG_FILE):
+        try:
+            with open(SERVICES_CONFIG_FILE, 'r') as f:
+                services = json.load(f)
+                
             for k, v in list(services.items()):
                 if isinstance(v, list):
                     services[k] = {"ipports": v, "color": "#007bff"}
+                    
             return services
-    return {}
+        except (json.JSONDecodeError, FileNotFoundError):
+            print(f"Errore leggendo {SERVICES_CONFIG_FILE}, ritorno dizionario vuoto")
+            return {}
 
 def save_services_config(services):
-    """Save services configuration to JSON file"""
-    with open(SERVICES_CONFIG_FILE, 'w') as f:
-        json.dump(services, f, indent=2)
+    """Save services configuration to JSON file with file locking"""
+    with file_lock(SERVICES_CONFIG_FILE):
+        try:
+            temp_file = f"{SERVICES_CONFIG_FILE}.tmp"
+            with open(temp_file, 'w') as f:
+                json.dump(services, f, indent=2)
+            
+            os.rename(temp_file, SERVICES_CONFIG_FILE)
+            
+        except Exception as e:
+            print(f"Errore salvando {SERVICES_CONFIG_FILE}: {e}")
+            try:
+                os.unlink(f"{SERVICES_CONFIG_FILE}.tmp")
+            except:
+                pass
+            raise
 
 async def api_services_get(request):
     """GET /api/services - Get list of services"""
@@ -128,7 +171,7 @@ async def api_flow_list(request):
     if services == ["!"]:
         # Filter flows related to no services
         query += "AND NOT (src_ipport IN fsrvs OR dest_ipport IN fsrvs)"
-        services = sum(CTF_CONFIG["services"].values(), [])
+        services = [ipport for s in CTF_CONFIG["services"].values() for ipport in (s["ipports"] if isinstance(s, dict) else s)]
     elif services:
         query += "AND (src_ipport IN fsrvs OR dest_ipport IN fsrvs)"
     if tags_deny:
@@ -395,15 +438,16 @@ CTF_CONFIG = {
     "default_ip": extract_ip_from_pcap_command(),
     "services": {},
 }
-service_names = config("CTF_SERVICES", cast=CommaSeparatedStrings, default=[])
-for name in service_names:
-    ipports = config(f"CTF_SERVICE_{name.upper()}", cast=CommaSeparatedStrings)
-    CTF_CONFIG["services"][name] = list(ipports)
 
 services_from_file = load_services_config()
 if services_from_file:
-    CTF_CONFIG["services"].update(services_from_file)
-
+    CTF_CONFIG["services"] = services_from_file
+else:
+    service_names = config("CTF_SERVICES", cast=CommaSeparatedStrings, default=[])
+    for name in service_names:
+        ipports = config(f"CTF_SERVICE_{name.upper()}", cast=CommaSeparatedStrings)
+        CTF_CONFIG["services"][name] = {"ipports": list(ipports), "color": "#007bff"}
+    save_services_config(CTF_CONFIG["services"])
 
 # Define web application
 eve_database = None
