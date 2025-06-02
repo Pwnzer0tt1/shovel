@@ -18,26 +18,25 @@ class ServicesManager {
 
     async addService() {
         const name = document.getElementById('serviceName').value.trim()
-        const ip = document.getElementById('serviceIP').value.trim()  // NUOVO: IP fisso
-        const portsText = document.getElementById('servicePorts').value.trim()  // NUOVO: solo porte
+        const ip = document.getElementById('serviceIP').value.trim()  // Fixed IP
+        const portsText = document.getElementById('servicePorts').value.trim()
 
         if (!name) {
             alert('Insert a service name')
             return
         }
 
-        // Processa solo le porte (numeri)
+        // Process the ports input
         const ports = portsText.split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0)
-            .filter(port => /^\d+$/.test(port)) // Solo numeri
+            .filter(port => /^\d+$/.test(port))
 
         if (ports.length === 0) {
             alert('Insert at least one valid port')
             return
         }
 
-        // Combina IP fisso + porte
         const ipports = ports.map(port => `${ip}:${port}`)
 
         try {
