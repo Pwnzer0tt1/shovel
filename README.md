@@ -148,8 +148,6 @@ PCAP_OVER_IP=pcap-broker:4242 ./suricata/entrypoint.sh -r /dev/stdin
 > [!WARNING]
 > Please note that stopping Suricata will stop network capture.
 
----
-
 ## Usage
 
 ### Starting Shovel
@@ -192,7 +190,8 @@ Click on the settings icon in the top left corner to open the **Service Manager*
 
 After adding a service, you can also edit it by clicking on the pencil icon next to the service name.
 
-> [!WARNING] Note that if Shovel is stopped and restarted with `--build`, the configuration in web interface will be
+> [!WARNING]
+> Note that if Shovel is stopped and restarted with `--build`, the configuration in web interface will be
 > lost.
 
 ### Auto Refresh
