@@ -18,59 +18,59 @@ class ServicesManager {
     }
 
     async addService() {
-        const name = document.getElementById('serviceName').value.trim()
-        const ip = document.getElementById('serviceIP').value.trim()
-        const portsText = document.getElementById('servicePorts').value.trim()
-        const color = document.getElementById('serviceColor').value
+        const nameInput = document.getElementById('serviceName')
+        const portsInput = document.getElementById('servicePorts')
+        const colorInput = document.getElementById('serviceColor')
 
-        if (!name) {
-            alert('Insert a service name')
+        const name = nameInput.value.trim()
+        const ports = portsInput.value.trim().split('\n').filter(p => p.trim())
+        const color = colorInput.value
+
+        if (!name || ports.length === 0) {
+            this.showToast('Please fill in all fields', 'error')
             return
         }
 
-        // Validation port numbers
-        const ports = portsText
-            .split(/[\n,]+/) // split by newlines or commas
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
-            .filter(port => /^\d+$/.test(port)) // only numbers
+        const defaultIp = document.getElementById('app').dataset.defaultIp || '10.60.2.1'
+        const ipports = ports.map(port => `${defaultIp}:${port}`)
 
-        if (ports.length === 0) {
-            alert('Insert at least one valid port')
-            return
+        const payload = {
+            name: name,
+            ipports: ipports,
+            color: color
         }
 
-        // Static IP + ports
-        const ipports = ports.map(port => `${ip}:${port}`)
+        // Se stiamo modificando un servizio, aggiungi old_name
+        if (this.currentEditButton) {
+            const oldName = this.currentEditButton.dataset.serviceName
+            if (oldName !== name) {
+                payload.old_name = oldName
+            }
+        }
 
         try {
             const response = await fetch('/api/services', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, ipports, color})
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
             })
 
             if (response.ok) {
-                document.getElementById('serviceName').value = ''
-                document.getElementById('servicePorts').value = ''
-                document.getElementById('serviceColor').value = this.generateRandomColor()
-                this.resetAddButton()
                 await this.loadServices()
-
-                // Show toast message
-                const isEditing = this.currentEditButton !== null;
-                if (isEditing) {
-                    this.showToast(`Service <strong>${name}</strong> edited successfully`);
-                    this.restoreEditButton();
-                } else {
-                    this.showToast(`Service <strong>${name}</strong> added successfully`);
-                }
+                nameInput.value = ''
+                portsInput.value = ''
+                colorInput.value = this.generateRandomColor()
+                this.resetAddButton()
+                this.restoreEditButton()
+                this.showToast('Service saved successfully!', 'success')
             } else {
-                alert('Error in saving service')
+                this.showToast('Error saving service', 'error')
             }
         } catch (error) {
-            console.error('Connection Error:', error)
-            alert('Connection Error')
+            console.error('Error:', error)
+            this.showToast('Error saving service', 'error')
         }
     }
 
