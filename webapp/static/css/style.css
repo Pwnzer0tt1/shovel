@@ -76,3 +76,14 @@ pre {
 pre code {
   padding: .1875em 0;
 }
+
+.service-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+    margin: 1px 2px;
+}

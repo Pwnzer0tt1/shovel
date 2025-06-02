@@ -306,17 +306,17 @@ class FlowList {
             const serviceColor = window.servicesManager.getServiceColor(ipport)
             if (serviceColor !== '#6c757d') {
                 if (name) {
-                    return `<span style="color: ${serviceColor}; font-weight: bold;">${name}</span> (:${port})`
+                    return `<span class="service-badge" style="background-color: ${serviceColor}">${name}</span> (:${port})`
                 } else {
-                    return `<span style="color: ${serviceColor};">${ipport}</span>`
+                    return `<span class="service-badge" style="background-color: ${serviceColor}">${ipport}</span>`
                 }
             }
         }
         
         if (name) {
-            return `<span style="color: ${color}; font-weight: bold;">${name}</span> (:${port})`
+            return `<span class="service-badge" style="background-color: ${color}">${name}</span> (:${port})`
         } else {
-            return `<span style="color: #6c757d;">${ipport}</span>`
+            return `<span class="service-badge" style="background-color: #6c757d">${ipport}</span>`
         }
     }
 
@@ -577,12 +577,24 @@ class FlowList {
 }
 
 const flowList = new FlowList()
+window.flowList = flowList
 
-flowList.init().then(() => {
+const initFlowList = async () => {
+    // Wait for services manager to be available
+    if (window.servicesManager && !window.servicesManager.isLoaded) {
+        await new Promise(resolve => {
+            window.addEventListener('servicesLoaded', resolve, { once: true })
+        })
+    }
+    
+    await flowList.init()
+    
     if (flowList.autoUpdateEnabled && flowList.tickLength > 0) {
         flowList.autoUpdateInterval = setInterval(() => {
             flowList.updatePreservingScroll(false)
             console.log("Updating flow list...")
         }, flowList.tickLength * 1000)
     }
-})
+}
+
+initFlowList()
