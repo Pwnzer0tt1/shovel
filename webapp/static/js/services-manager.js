@@ -40,7 +40,7 @@ class ServicesManager {
             color: color
         }
 
-        // Se stiamo modificando un servizio, aggiungi old_name
+        // If editing an existing service, include the old name
         if (this.currentEditButton) {
             const oldName = this.currentEditButton.dataset.serviceName
             if (oldName !== name) {
