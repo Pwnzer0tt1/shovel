@@ -3,6 +3,7 @@
 class ServicesManager {
     constructor() {
         this.services = {}
+        this.currentEditButton = null
     }
 
     async loadServices() {
@@ -27,17 +28,19 @@ class ServicesManager {
             return
         }
 
-        // Process the ports input
-        const ports = portsText.split('\n')
+        // Validation port numbers
+        const ports = portsText
+            .split(/[\n,]+/) // split by newlines or commas
             .map(line => line.trim())
             .filter(line => line.length > 0)
-            .filter(port => /^\d+$/.test(port))
+            .filter(port => /^\d+$/.test(port)) // only numbers
 
         if (ports.length === 0) {
             alert('Insert at least one valid port')
             return
         }
 
+        // Static IP + ports
         const ipports = ports.map(port => `${ip}:${port}`)
 
         try {
@@ -48,7 +51,10 @@ class ServicesManager {
             })
 
             if (response.ok) {
-                this.resetForm()
+                document.getElementById('serviceName').value = ''
+                document.getElementById('servicePorts').value = ''
+                document.getElementById('serviceColor').value = this.generateRandomColor()
+                this.resetAddButton()
                 await this.loadServices()
             } else {
                 alert('Error in saving service')
@@ -91,11 +97,11 @@ class ServicesManager {
         Object.entries(this.services).forEach(([name, serviceData]) => {
             const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
             const color = serviceData.color || '#007bff'
-            
+
             const optgroup = document.createElement('optgroup')
             optgroup.label = name
             optgroup.dataset.ipports = ipports.join(' ')
-            optgroup.dataset.color = color // Add color 
+            optgroup.dataset.color = color // Add color
 
             if (ipports.length > 1) {
                 const allOption = document.createElement('option')
@@ -141,13 +147,13 @@ class ServicesManager {
         Object.entries(this.services).forEach(([name, serviceData]) => {
             const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
             const color = serviceData.color || '#007bff'
-            
+
             const serviceDiv = document.createElement('div')
             serviceDiv.className = 'card mb-2 border-0 shadow-sm'
 
             serviceDiv.innerHTML = `
             <div class="card-header bg-transparent text-white d-flex justify-content-between align-items-center">   
-            <div class="card-body p-3">
+            <div class="card-body p-2">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <h6 class="card-title mb-1 text-light d-flex align-items-center">
@@ -179,7 +185,7 @@ class ServicesManager {
 
     generateRandomColor() {
         const colors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
             '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
             '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA',
             '#F1948A', '#85C1E9', '#F4D03F', '#AED6F1'
@@ -187,30 +193,82 @@ class ServicesManager {
         return colors[Math.floor(Math.random() * colors.length)]
     }
 
-    resetForm() {
-        document.getElementById('serviceName').value = ''
-        document.getElementById('servicePorts').value = ''
-        document.getElementById('serviceColor').value = this.generateRandomColor()
-    }
 
-    editService(name) {
+    async editService(name) {
+        const addBtn = document.getElementById('addServiceBtn')
+        if (addBtn) {
+            console.log("Changing add button text and classes for editing")
+            addBtn.textContent = 'Confirm changes'
+            addBtn.classList.remove('btn-primary')
+            addBtn.classList.add('btn-success')
+        }
+
         const serviceData = this.services[name]
         const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
         const color = serviceData.color || '#007bff'
-        
+
         document.getElementById('serviceName').value = name
         document.getElementById('serviceColor').value = color
-        
+
         const ports = ipports.map(ipport => {
             const parts = ipport.split(':')
             return parts[parts.length - 1]
         })
-        
+
         document.getElementById('servicePorts').value = ports.join('\n')
+    }
+
+    resetAddButton() {
+        const addBtn = document.getElementById('addServiceBtn')
+        if (addBtn) {
+            addBtn.textContent = 'Add Service'
+            addBtn.classList.remove('btn-success')
+            addBtn.classList.add('btn-primary')
+        }
+    }
+
+    // Transform Edit button to X button, to cancel editing
+    editBtnToX(button) {
+        this.currentEditButton = button;
+
+        button.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+            </svg>
+        `;
+
+        button.classList.remove('btn-success');
+        button.classList.add('btn-warning');
+        button.title = "Cancel editing";
+    }
+
+    // Reset the Edit button to its original state
+    restoreEditButton() {
+        if (this.currentEditButton) {
+            this.currentEditButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                </svg>
+            `;
+
+            this.currentEditButton.classList.remove('btn-warning');
+            this.currentEditButton.classList.add('btn-success');
+            this.currentEditButton.title = "Edit service";
+
+            this.currentEditButton = null;
+        }
+    }
+
+    // Cancel editing and reset the form
+    cancelEdit() {
+        document.getElementById('serviceName').value = '';
+        document.getElementById('servicePorts').value = '';
+        this.resetAddButton();
+        this.restoreEditButton();
     }
 }
 
-// Inizialize the ServicesManager instance
+// Initialize the ServicesManager instance
 const servicesManager = new ServicesManager()
 window.servicesManager = servicesManager
 
@@ -221,11 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load services when the modal is shown
         modal.addEventListener('show.bs.modal', () => {
             servicesManager.loadServices()
-            servicesManager.resetForm() // Reset del form quando si apre il modal
+        })
+
+        // Reset status when the modal is hidden
+        modal.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('serviceName').value = ''
+            document.getElementById('servicePorts').value = ''
+            servicesManager.resetAddButton()
+            servicesManager.restoreEditButton()
         })
 
         // Link the "Add Service" button to the addService method
-        const addButton = modal.querySelector('.btn-primary')
+        const addButton = modal.querySelector('#addServiceBtn')
         if (addButton) {
             addButton.addEventListener('click', () => servicesManager.addService())
         }
@@ -234,15 +299,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const servicesList = document.getElementById('servicesList')
         if (servicesList) {
             servicesList.addEventListener('click', (e) => {
-                // deletion button
+                // Delete service
                 if (e.target.closest('.delete-service-btn')) {
                     const serviceName = e.target.closest('.delete-service-btn').dataset.serviceName
                     servicesManager.deleteService(serviceName)
                 }
-                // modification button
+
+                // Edit service
                 else if (e.target.closest('.edit-service-btn')) {
-                    const serviceName = e.target.closest('.edit-service-btn').dataset.serviceName
-                    servicesManager.editService(serviceName)
+                    const editBtn = e.target.closest('.edit-service-btn');
+                    const serviceName = editBtn.dataset.serviceName;
+
+                    // If the button is already in edit mode (has class 'btn-warning'), cancel the edit
+                    if (editBtn.classList.contains('btn-warning')) {
+                        servicesManager.cancelEdit();
+                    } else {
+                        servicesManager.editBtnToX(editBtn);
+                        servicesManager.editService(serviceName);
+                    }
                 }
             })
         }

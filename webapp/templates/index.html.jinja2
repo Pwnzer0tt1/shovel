@@ -302,20 +302,18 @@
                         <span class="form-text">(auto-extracted from PCAP: {{ ctf_config.default_ip }})</span>
                     </label>
                     <input type="text" class="form-control" id="serviceIP" value="{{ ctf_config.default_ip }}" readonly>
-                    {#                    <div class="form-text">IP automatically extracted from PCAP#}
-                    {#                        command: {{ ctf_config.default_ip }}</div>#}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Ports <span class="form-text">(one per line)</span></label>
+                    <label class="form-label">Ports <span class="form-text">(one per line or with commas)</span></label>
                     <textarea class="form-control" id="servicePorts" rows="3"
-                              placeholder="80&#10;443&#10;8080"></textarea>
+                              placeholder="(e.g., 80, 443, 8080)"></textarea>
                     <div class="form-text">Insert only port numbers</div>
                 </div>
                 <div class="mb-3">
                     <label for="serviceColor" class="form-label">Service Color</label>
                     <input type="color" class="form-control form-control-color" id="serviceColor" value="#007bff" title="Choose service color">
                 </div>
-                <button class="btn btn-primary w-100">Add/Modify</button>
+                <button class="btn btn-primary w-100" id="addServiceBtn">Add Service</button>
             </div>
             <div class="modal-footer mb-0">
                 <div id="servicesList" class="w-100"></div>
