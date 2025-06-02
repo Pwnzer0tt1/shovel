@@ -56,6 +56,15 @@ class ServicesManager {
                 document.getElementById('serviceColor').value = this.generateRandomColor()
                 this.resetAddButton()
                 await this.loadServices()
+
+                // Show toast message
+                const isEditing = this.currentEditButton !== null;
+                if (isEditing) {
+                    this.showToast(`Service <strong>${name}</strong> edited successfully`);
+                    this.restoreEditButton();
+                } else {
+                    this.showToast(`Service <strong>${name}</strong> added successfully`);
+                }
             } else {
                 alert('Error in saving service')
             }
@@ -66,8 +75,6 @@ class ServicesManager {
     }
 
     async deleteService(name) {
-        if (!confirm(`Are you sure to delete this service: "${name}"?`)) return
-
         try {
             const response = await fetch(`/api/services/${encodeURIComponent(name)}`, {
                 method: 'DELETE'
@@ -75,6 +82,7 @@ class ServicesManager {
 
             if (response.ok) {
                 await this.loadServices()
+                this.showToast(`Service <strong>${name}</strong> deleted successfully`, 'danger');
             } else {
                 alert('Error in deleting service')
             }
@@ -82,6 +90,24 @@ class ServicesManager {
             console.error('Connection Error:', error)
             alert('Connection Error')
         }
+    }
+
+    showDeleteConfirmModal(serviceName) {
+        const modal = document.getElementById('deleteConfirmModal');
+        const bsModal = new bootstrap.Modal(modal);
+
+        document.getElementById('serviceNameToDelete').textContent = serviceName;
+
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+        newConfirmBtn.addEventListener('click', async () => {
+            await this.deleteService(serviceName);
+            bsModal.hide();
+        });
+
+        bsModal.show();
     }
 
     updateServicesSelect() {
@@ -266,6 +292,46 @@ class ServicesManager {
         this.resetAddButton();
         this.restoreEditButton();
     }
+
+    // Show a custom Toast message
+    showToast(message, type = 'success') {
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toastId = `toast-${Date.now()}`;
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+        toastEl.id = toastId;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+
+        toastContainer.appendChild(toastEl);
+
+        const toast = new bootstrap.Toast(toastEl, {
+            autohide: true,
+            delay: 3000
+        });
+        toast.show();
+
+        toastEl.addEventListener('hidden.bs.toast', () => {
+            toastEl.remove();
+        });
+    }
 }
 
 // Initialize the ServicesManager instance
@@ -302,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Delete service
                 if (e.target.closest('.delete-service-btn')) {
                     const serviceName = e.target.closest('.delete-service-btn').dataset.serviceName
-                    servicesManager.deleteService(serviceName)
+                    servicesManager.showDeleteConfirmModal(serviceName)
                 }
 
                 // Edit service

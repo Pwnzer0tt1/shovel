@@ -311,12 +311,35 @@
                 </div>
                 <div class="mb-3">
                     <label for="serviceColor" class="form-label">Service Color</label>
-                    <input type="color" class="form-control form-control-color" id="serviceColor" value="#007bff" title="Choose service color">
+                    <input type="color" class="form-control form-control-color" id="serviceColor" value="#007bff"
+                           title="Choose service color">
                 </div>
                 <button class="btn btn-primary w-100" id="addServiceBtn">Add Service</button>
             </div>
             <div class="modal-footer mb-0">
                 <div id="servicesList" class="w-100"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal to confirm deletion of a service -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Delete confirmation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the service <strong id="serviceNameToDelete"></strong>?
+                <p class="text-muted mt-2 mb-0 small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
             </div>
         </div>
     </div>
