@@ -256,7 +256,7 @@ class FlowList {
                 this.updatePreservingScroll(false)
                 this.autoUpdateInterval = setInterval(() => {
                     this.updatePreservingScroll(false)
-                }, this.tickLength * 1000)
+                }, this.refreshRate * 1000)
             } else {
                 e.currentTarget.classList.remove('btn-success')
                 e.currentTarget.classList.add('btn-danger')
@@ -272,6 +272,7 @@ class FlowList {
         const appData = document.getElementById('app').dataset
         this.startTs = Math.floor(Date.parse(appData.startDate) / 1000)
         this.tickLength = Number(appData.tickLength)
+        this.refreshRate = Number(appData.refreshRate)
         this.tags = []
         this.update()
     }
@@ -301,7 +302,7 @@ class FlowList {
         const name = optgroup?.label
         const color = optgroup?.dataset.color || '#6c757d'
         const port = ipport.split(':').slice(-1)
-        
+
         if (window.servicesManager && window.servicesManager.services) {
             const serviceColor = window.servicesManager.getServiceColor(ipport)
             if (serviceColor !== '#6c757d') {
@@ -312,7 +313,7 @@ class FlowList {
                 }
             }
         }
-        
+
         if (name) {
             return `<span class="service-badge" style="background-color: ${color}">${name}</span> (:${port})`
         } else {
@@ -583,17 +584,17 @@ const initFlowList = async () => {
     // Wait for services manager to be available
     if (window.servicesManager && !window.servicesManager.isLoaded) {
         await new Promise(resolve => {
-            window.addEventListener('servicesLoaded', resolve, { once: true })
+            window.addEventListener('servicesLoaded', resolve, {once: true})
         })
     }
-    
+
     await flowList.init()
-    
+
     if (flowList.autoUpdateEnabled && flowList.tickLength > 0) {
         flowList.autoUpdateInterval = setInterval(() => {
             flowList.updatePreservingScroll(false)
             console.log("Updating flow list...")
-        }, flowList.tickLength * 1000)
+        }, flowList.refreshRate * 1000)
     }
 }
 

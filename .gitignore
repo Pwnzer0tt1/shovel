@@ -10,6 +10,7 @@ suricata/suricata-eve-sqlite-output/target
 
 # Configurazione
 #.env
+services_config.json
 
 # Python
 */__pycache__

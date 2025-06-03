@@ -423,7 +423,8 @@ PAYLOAD_DB_URI = config(
 )
 CTF_CONFIG = {
     "start_date": config("CTF_START_DATE", cast=str, default="1970-01-01T00:00+00:00"),
-    "tick_length": config("CTF_TICK_LENGTH", cast=int, default=0),
+    "tick_length": config("CTF_TICK_LENGTH", cast=int, default=120),
+    "refresh_rate": config("REFRESH_RATE", cast=int, default=120),
     "default_ip": config("TARGET_IP", cast=str, default=""),
     "services": {},
 }
