@@ -1,62 +1,45 @@
 #!/usr/bin/env python3
 import argparse
-import argcomplete
 import os
 import subprocess
 import sys
 import re
+import shutil
 from datetime import datetime
 
 
-def update_env(target_ip=None, start_date=None):
-    """Update the TARGET_IP and/or CTF_START_DATE in the .env file"""
+def write_env(start_date, target_ip, tick_length, refresh_rate):
     env_file = ".env"
     if not os.path.exists(env_file):
-        print(f"Warning: {env_file} file not found. Creating new file.")
-        with open(env_file, "w") as f:
-            content = ""
-            if start_date:
-                # Ensure date has timezone information
-                if not ('+' in start_date or '-' in start_date[10:]):
-                    content += f"CTF_START_DATE={start_date}+02:00\n"
-                else:
-                    content += f"CTF_START_DATE={start_date}\n"
-            if target_ip:
-                content += f"TARGET_IP={target_ip}\n"
-            f.write(content)
-        return
+        print(f"[+] Warning: {env_file} file not found. Creating new file.")
+        os.makedirs(os.path.dirname(env_file))
 
-    with open(env_file, "r") as f:
-        content = f.read()
+    with open(env_file, "w") as f:
+        content = ""
 
-    # Update CTF_START_DATE if provided
-    if start_date:
         # Ensure date has timezone information
         if not ('+' in start_date or '-' in start_date[10:]):
             formatted_date = f"{start_date}+02:00"
         else:
             formatted_date = start_date
 
-        if "CTF_START_DATE=" in content:
-            content = re.sub(r"CTF_START_DATE=.*", f"CTF_START_DATE={formatted_date}", content)
-        else:
-            content += f"\nCTF_START_DATE={formatted_date}\n"
-        print(f"     > Updated CTF_START_DATE to {formatted_date} in {env_file}")
+        content += f"CTF_START_DATE={formatted_date}\n"
+        content += f"TICK_LENGTH={tick_length}\n"
+        content += f"TARGET_IP={target_ip}\n"
+        content += f"REFRESH_RATE={refresh_rate}\n"
 
-    # Update TARGET_IP if provided
-    if target_ip:
-        if "TARGET_IP=" in content:
-            content = re.sub(r"TARGET_IP=.*", f"TARGET_IP={target_ip}", content)
-        else:
-            content += f"\nTARGET_IP={target_ip}\n"
-        print(f"     > Updated TARGET_IP to {target_ip} in {env_file}")
-
-    with open(env_file, "w") as f:
         f.write(content)
+
+    print(f"     > Written CTF_START_DATE to {formatted_date} in {env_file}")
+    print(f"     > Written TARGET_IP to {target_ip} in {env_file}")
+    print(f"     > Written TICK_LENGTH to {tick_length} in {env_file}")
+    print(f"     > Written REFRESH_RATE to {refresh_rate} in {env_file}")
+
+    return
 
 
 def validate_date_format(date_str):
-    """Validate the date string to be written in the correct format."""
+    """Validate the date string to be written in the correct format"""
     try:
         # Check basic format first
         if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(([+-]\d{2}:\d{2})|Z)?$", date_str):
@@ -75,7 +58,7 @@ def validate_date_format(date_str):
 
 
 def update_compose(target_ip):
-    """Update the SSH target IP in the docker-compose-c.yml file."""
+    """Update the SSH target IP in the docker-compose-c.yml file"""
     compose_file = "docker-compose-c.yml"
 
     if not os.path.exists(compose_file):
@@ -98,6 +81,45 @@ def update_compose(target_ip):
         print(f"Warning: Could not find SSH command pattern in {compose_file}")
 
 
+def compose_down(compose_file):
+    """Stop and remove containers defined in the specified docker-compose file"""
+    cmd = ["docker", "compose", "-f", compose_file, "down"]
+    print(f"[+] Executing: {' '.join(cmd)}")
+    subprocess.run(cmd, check=True)
+    print("\n[+] Containers successfully stopped!\n")
+
+
+def compose_up(compose_file, build):
+    """Start containers defined in the specified docker-compose file"""
+    cmd = ["docker", "compose", "-f", compose_file, "up", "-d"]
+    if build:
+        cmd.append("build")
+
+    print(f"[+] Executing: {' '.join(cmd)}")
+    subprocess.run(cmd, check=True)
+    print("\n[+] Containers successfully started!\n")
+
+
+def clear_suricata():
+    """Clean the Suricata output directory by recursively removing all files and subdirectories"""
+    suricata_output_path = "./suricata/output/"
+
+    if os.path.exists(suricata_output_path):
+        print(f"[+] Cleaning Suricata output directory: {suricata_output_path}")
+
+        for filename in os.listdir(suricata_output_path):
+            file_path = os.path.join(suricata_output_path, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path, ignore_errors=True)
+            except Exception as e:
+                print(f"\n[-] Failed to delete {file_path}. Reason: {e}")
+
+        print(f"    Suricata output directory cleaned successfully!")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Start Shovel using the specified mode")
     mode_group = parser.add_mutually_exclusive_group()
@@ -105,14 +127,15 @@ def main():
     mode_group.add_argument("--mode-b", action="store_true", help="Start in mode B (capture interface)")
     mode_group.add_argument("--mode-c", action="store_true", help="Start in mode C (PCAP-over-IP, default)")
 
-    parser.add_argument("--down", action="store_true", help="Stop containers before starting them")
+    parser.add_argument("--down", dest="down", action="store_true", help="Stop containers listed in docker-compose")
     parser.add_argument("--build", "-b", dest="build", action="store_true", help="Rebuild images before starting them")
-    parser.add_argument("--target-ip", "-ip", dest="target_ip", help="Specify target machine IP address (for mode C)")
-    parser.add_argument("--date", dest="start_date",
-                        help="Specify CTF start date (format: YYYY-MM-DDThh:mm, timezone +02:00 added if not specified)")
+    parser.add_argument("--clear", "-c", dest="clear", action="store_true", help="Rebuild images before starting them")
 
-    if 'argcomplete' in sys.modules:
-        argcomplete.autocomplete(parser)
+    parser.add_argument("--date", dest="start_date",
+                        help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz, timezone +02:00 added if not specified)")
+    parser.add_argument("--target-ip", "-ip", dest="target_ip", help="Specify target machine IP address (for mode C)")
+    parser.add_argument("--refresh-rate", "-r", dest="refresh_rate", help="Specify refresh rate (in seconds)")
+    parser.add_argument("--tick-length", "-t", dest="tick_length", help="Specify tick length (in seconds)")
 
     args = parser.parse_args()
 
@@ -130,19 +153,28 @@ def main():
     elif use_mode_c:
         compose_file = "docker-compose-c.yml"
 
-    cmd = ["docker", "compose", "-f", compose_file]
-
     # If --down or --build is specified, stop the containers first
     if args.down or args.build:
-        down_cmd = cmd + ["down"]
-        print(f"[+] Executing: {' '.join(down_cmd)}\n")
-        subprocess.run(down_cmd, check=True)
-
-        print("\n[+] Containers successfully stopped!\n")
+        compose_down(compose_file)
         if args.down and not args.build:
             sys.exit(0)
+    elif args.clear:
+        compose_down(compose_file)
+        clear_suricata()
+        sys.exit(0)
+    else:
+        print("[-] No relevant action specified (down, build, clear). Use -h for help.")
+        sys.exit(1)
 
-    if use_mode_c:
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    if args.mode_a:
+        print("[+] Starting in mode A (pcap replay)...")
+    elif args.mode_b:
+        print("[+] Starting in mode B (capture interface)...")
+    elif use_mode_c:
+        print("[+] Starting in mode C (PCAP-over-IP)...")
+
         if not args.target_ip:
             print("[-] No target IP specified for mode C. Please provide --target-ip (or -ip) option.")
             sys.exit(1)
@@ -154,22 +186,36 @@ def main():
             print("    Timezone +02:00 will be added automatically if not specified")
             sys.exit(1)
 
-        print("[+] Starting in mode C (PCAP-over-IP)...")
+        if not args.tick_length:
+            print("[-] No tick length specified. Please provide --tick-length (or -t) option.")
+            sys.exit(1)
+
+        if not args.refresh_rate:
+            print("[-] No refresh rate specified. Please provide --refresh-rate (or -r) option.")
+            sys.exit(1)
 
         # If target IP and date are specified, update '.env' and 'docker-compose-c.yml'
-        update_env(target_ip=args.target_ip, start_date=args.start_date)
+        write_env(
+            start_date=args.start_date,
+            target_ip=args.target_ip,
+            tick_length=args.tick_length,
+            refresh_rate=args.refresh_rate
+        )
         update_compose(args.target_ip)
 
-    if args.build:
-        cmd.append("up")
-        cmd.append("--build")
-    else:
-        cmd.append("up")
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    cmd.append("-d")
+        # Create a new file 'services_config.json' empty
+        json_config = "services_config.json"
+        if not os.path.exists(json_config):
+            print(f"[+] Creating empty {json_config} file.")
+            with open(json_config, "w") as f:
+                f.write("{}")
 
-    print(f"\n[+] Executing: {' '.join(cmd)}\n")
-    subprocess.run(cmd, check=True)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # Start the containers using the selected docker-compose file
+    compose_up(compose_file, args.build)
 
     print(f"\n[+] Shovel successfully started in mode {'A' if args.mode_a else 'B' if args.mode_b else 'C'}!")
     print(f"    Web interface is available at: http://127.0.0.1:8000")

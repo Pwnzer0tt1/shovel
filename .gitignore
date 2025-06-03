@@ -9,7 +9,7 @@ suricata/output/*.db-wal
 suricata/suricata-eve-sqlite-output/target
 
 # Configurazione
-#.env
+.env
 services_config.json
 
 # Python
