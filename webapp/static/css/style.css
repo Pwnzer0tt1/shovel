@@ -178,3 +178,50 @@ pre code {
 body {
     padding-bottom: 40px;
 }
+
+.services-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.services-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.services-list-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.services-list-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Effetto hover più smooth per i servizi */
+.services-list-container .card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.services-list-container .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+}
+
+/* Modal responsive */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-content {
+        max-height: 95vh !important;
+    }
+    
+    .modal-body {
+        max-height: calc(95vh - 120px) !important;
+    }
+    
+    .services-list-container {
+        max-height: 200px !important;
+    }
+}

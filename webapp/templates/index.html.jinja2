@@ -283,15 +283,16 @@
     </div>
 </div>
 
+<!-- filepath: /home/gil/Desktop/CCRepo/shovel/webapp/templates/index.html.jinja2 -->
 <!-- Modal to manage services -->
 <div class="modal fade" id="servicesModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="max-height: 90vh;">
             <div class="modal-header">
                 <h5 class="modal-title">Service Manager</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="max-height: calc(90vh - 120px); overflow-y: auto;">
                 <!-- Sezione per aggiungere servizi -->
                 <div class="mb-3">
                     <label class="form-label">Service name</label>
@@ -334,9 +335,20 @@
                     </div>
                     <div class="form-text">How often the flow list should refresh automatically</div>
                 </div>
-            </div>
-            <div class="modal-footer mb-0">
-                <div id="servicesList" class="w-100"></div>
+                
+                <!-- Sezione servizi configurati con scroll separato -->
+                <hr class="my-4">
+                <div class="configured-services-section">
+                    <h6 class="text-muted mb-3">
+                        <svg class="bi me-2" width="16" height="16">
+                            <use xlink:href="#list"></use>
+                        </svg>
+                        Configured Services
+                    </h6>
+                    <div id="servicesList" class="services-list-container" style="max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                        <!-- I servizi verranno inseriti qui -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
