@@ -32,7 +32,7 @@ def write_env(start_date, target_ip, tick_length, refresh_rate):
             formatted_date = start_date
 
         content += f"CTF_START_DATE={formatted_date}\n"
-        content += f"TICK_LENGTH={tick_length}\n"
+        content += f"CTF_TICK_LENGTH={tick_length}\n"
         content += f"TARGET_IP={target_ip}\n"
         content += f"REFRESH_RATE={refresh_rate}\n"
 
@@ -40,7 +40,7 @@ def write_env(start_date, target_ip, tick_length, refresh_rate):
 
     print(f"     > Written CTF_START_DATE to {formatted_date} in {ENV_FILE}")
     print(f"     > Written TARGET_IP to {target_ip} in {ENV_FILE}")
-    print(f"     > Written TICK_LENGTH to {tick_length} in {ENV_FILE}")
+    print(f"     > Written CTF_TICK_LENGTH to {tick_length} in {ENV_FILE}")
     print(f"     > Written REFRESH_RATE to {refresh_rate} in {ENV_FILE}")
 
     return
