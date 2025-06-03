@@ -292,6 +292,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <!-- Sezione per aggiungere servizi -->
                 <div class="mb-3">
                     <label class="form-label">Service name</label>
                     <input type="text" class="form-control" id="serviceName" placeholder="es. web">
@@ -313,7 +314,26 @@
                     <input type="color" class="form-control form-control-color" id="serviceColor" value="#007bff"
                            title="Choose service color">
                 </div>
-                <button class="btn btn-primary w-100" id="addServiceBtn">Add Service</button>
+                <button class="btn btn-primary w-100 mb-4" id="addServiceBtn">Add Service</button>
+                
+                <!-- Divisore e sezione settings -->
+                <hr class="my-4">
+                <h6 class="text-muted mb-3">
+                    <svg class="bi me-2" width="16" height="16">
+                        <use xlink:href="#gear"></use>
+                    </svg>
+                    Application Settings
+                </h6>
+                <div class="mb-3">
+                    <label for="refreshRateInput" class="form-label">Auto-refresh rate (seconds)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="refreshRateInput" min="1" value="{{ ctf_config.refresh_rate }}">
+                        <button type="button" class="btn btn-outline-primary" id="saveRefreshRateBtn">
+                            Save
+                        </button>
+                    </div>
+                    <div class="form-text">How often the flow list should refresh automatically</div>
+                </div>
             </div>
             <div class="modal-footer mb-0">
                 <div id="servicesList" class="w-100"></div>

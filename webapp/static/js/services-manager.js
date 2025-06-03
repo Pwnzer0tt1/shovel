@@ -5,6 +5,59 @@ class ServicesManager {
         this.services = {}
         this.currentEditButton = null
         this.isLoaded = false
+        this.refreshRate = 120 
+    }
+
+    async loadRefreshRate() {
+        try {
+            const response = await fetch('/api/refresh-rate')
+            if (response.ok) {
+                const data = await response.json()
+                this.refreshRate = data.refresh_rate
+                const refreshRateInput = document.getElementById('refreshRateInput')
+                if (refreshRateInput) {
+                    refreshRateInput.value = this.refreshRate
+                }
+            }
+        } catch (error) {
+            console.error('Error loading refresh rate:', error)
+        }
+    }
+
+    async saveRefreshRate(refreshRate) {
+        try {
+            const response = await fetch('/api/refresh-rate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ refresh_rate: refreshRate })
+            })
+
+            if (response.ok) {
+                this.refreshRate = refreshRate
+                this.showToast('Refresh rate updated successfully!', 'success')
+                
+                if (window.flowList) {
+                    window.flowList.refreshRate = refreshRate
+                    if (window.flowList.autoUpdateEnabled && window.flowList.autoUpdateInterval) {
+                        clearInterval(window.flowList.autoUpdateInterval)
+                        window.flowList.autoUpdateInterval = setInterval(() => {
+                            window.flowList.updatePreservingScroll(false)
+                        }, refreshRate * 1000)
+                    }
+                }
+                return true
+            } else {
+                const errorData = await response.json()
+                this.showToast(`Error: ${errorData.error}`, 'error')
+                return false
+            }
+        } catch (error) {
+            console.error('Error saving refresh rate:', error)
+            this.showToast('Error saving refresh rate', 'error')
+            return false
+        }
     }
 
     async loadServices() {
@@ -496,6 +549,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.reload()
             })
         })
+
+        const saveRefreshRateBtn = document.getElementById('saveRefreshRateBtn')
+        if (saveRefreshRateBtn) {
+            saveRefreshRateBtn.addEventListener('click', async () => {
+                const refreshRateInput = document.getElementById('refreshRateInput')
+                const refreshRate = parseInt(refreshRateInput.value)
+                
+                if (refreshRate < 1) {
+                    servicesManager.showToast('Refresh rate must be at least 1 second', 'error')
+                    return
+                }
+
+                await servicesManager.saveRefreshRate(refreshRate)
+            })
+        }
+
+        const servicesModal = document.getElementById('servicesModal')
+        if (servicesModal) {
+            servicesModal.addEventListener('show.bs.modal', () => {
+                servicesManager.loadRefreshRate()
+            })
+        }
 
         // Link the "Add Service" button to the addService method
         const addButton = modal.querySelector('#addServiceBtn')

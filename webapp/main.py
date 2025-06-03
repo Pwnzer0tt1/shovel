@@ -50,28 +50,34 @@ def load_services_config():
     with file_lock(SERVICES_CONFIG_FILE):
         try:
             with open(SERVICES_CONFIG_FILE, 'r') as f:
-                services = json.load(f)
+                data = json.load(f)
 
-            for k, v in list(services.items()):
+            if not isinstance(data, dict) or 'services' not in data:
+                services = data if isinstance(data, dict) else {}
+                data = {
+                    'refresh_rate': CTF_CONFIG.get('refresh_rate', 120),
+                    'services': services
+                }
+
+            for k, v in list(data.get('services', {}).items()):
                 if isinstance(v, list):
-                    services[k] = {"ipports": v, "color": "#007bff"}
+                    data['services'][k] = {"ipports": v, "color": "#007bff"}
 
-            return services
+            return data
         except (json.JSONDecodeError, FileNotFoundError):
             print(f"Errore leggendo {SERVICES_CONFIG_FILE}, ritorno dizionario vuoto")
             return {}
 
-
-def save_services_config(services):
+def save_services_config(data):
     """Save services configuration to JSON file with file locking"""
     with file_lock(SERVICES_CONFIG_FILE):
         try:
             with open(SERVICES_CONFIG_FILE, 'w') as f:
-                json.dump(services, f, indent=2)
+                json.dump(data, f, indent=2)
                 f.flush()
                 os.fsync(f.fileno())
 
-            print(f"Servizi salvati correttamente in {SERVICES_CONFIG_FILE}")
+            print(f"Configurazione salvata correttamente in {SERVICES_CONFIG_FILE}")
 
         except Exception as e:
             print(f"Errore salvando {SERVICES_CONFIG_FILE}: {e}")
@@ -384,6 +390,33 @@ async def api_replay_raw(request):
         "raw-replay.py.jinja2", context, media_type="text/plain"
     )
 
+async def api_refresh_rate_get(request):
+    """GET /api/refresh-rate - Get current refresh rate"""
+    return JSONResponse({"refresh_rate": CTF_CONFIG["refresh_rate"]})
+
+async def api_refresh_rate_post(request):
+    """POST /api/refresh-rate - Update refresh rate"""
+    try:
+        data = await request.json()
+        refresh_rate = int(data.get("refresh_rate", 120))
+        
+        if refresh_rate < 1:
+            raise ValueError("Refresh rate must be at least 1 second")
+            
+        CTF_CONFIG["refresh_rate"] = refresh_rate
+        
+        # Carica la configurazione corrente e aggiorna solo il refresh_rate
+        current_config = load_services_config()
+        if not current_config:
+            current_config = {"services": CTF_CONFIG["services"]}
+            
+        current_config["refresh_rate"] = refresh_rate
+        save_services_config(current_config)
+        
+        return JSONResponse({"success": True, "refresh_rate": refresh_rate})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
 
 async def open_database(database_uri: str, text_factory=str) -> aiosqlite.Connection:
     while True:
@@ -430,15 +463,21 @@ CTF_CONFIG = {
     "services": {},
 }
 
-services_from_file = load_services_config()
-if services_from_file:
-    CTF_CONFIG["services"] = services_from_file
+services_config = load_services_config()
+if services_config:
+    CTF_CONFIG["services"] = services_config.get("services", {})
+    if "refresh_rate" in services_config:
+        CTF_CONFIG["refresh_rate"] = services_config["refresh_rate"]
 else:
     service_names = config("CTF_SERVICES", cast=CommaSeparatedStrings, default=[])
     for name in service_names:
         ipports = config(f"CTF_SERVICE_{name.upper()}", cast=CommaSeparatedStrings)
         CTF_CONFIG["services"][name] = {"ipports": list(ipports), "color": "#007bff"}
-    save_services_config(CTF_CONFIG["services"])
+
+save_services_config({
+    "refresh_rate": CTF_CONFIG["refresh_rate"],
+    "services": CTF_CONFIG["services"]
+})
 
 # Define web application
 eve_database = None
@@ -458,6 +497,9 @@ app = Starlette(
         Route("/api/services", api_services_get, methods=["GET"]),
         Route("/api/services", api_services_post, methods=["POST"]),
         Route("/api/services/{name}", api_services_delete, methods=["DELETE"]),
+        # API routes for refresh rate management
+        Route("/api/refresh-rate", api_refresh_rate_get, methods=["GET"]),
+        Route("/api/refresh-rate", api_refresh_rate_post, methods=["POST"]),
         Mount("/static", StaticFiles(directory="static")),
         Mount("/input_pcaps", StaticFiles(directory="../input_pcaps", check_dir=False)),
         Mount("/filestore", StaticFiles(directory="../suricata/output/filestore", check_dir=False)),
