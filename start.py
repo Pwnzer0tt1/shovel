@@ -4,17 +4,25 @@ import os
 import subprocess
 import sys
 import re
-import shutil
 from datetime import datetime
+
+ENV_FILE = ".env"
+COMPOSE_FILES = {
+    "A": "docker-compose-a.yml",
+    "B": "docker-compose-b.yml",
+    "C": "docker-compose-c.yml"
+}
 
 
 def write_env(start_date, target_ip, tick_length, refresh_rate):
-    env_file = ".env"
-    if not os.path.exists(env_file):
-        print(f"[+] Warning: {env_file} file not found. Creating new file.")
-        os.makedirs(os.path.dirname(env_file))
+    if not os.path.exists(ENV_FILE):
+        print(f"[+] Warning: {ENV_FILE} file not found. Creating new file.")
+        with open(ENV_FILE, "w") as f:
+            f.write("")
+    else:
+        print(f"[+] Updating {ENV_FILE} file.")
 
-    with open(env_file, "w") as f:
+    with open(ENV_FILE, "w") as f:
         content = ""
 
         # Ensure date has timezone information
@@ -30,10 +38,10 @@ def write_env(start_date, target_ip, tick_length, refresh_rate):
 
         f.write(content)
 
-    print(f"     > Written CTF_START_DATE to {formatted_date} in {env_file}")
-    print(f"     > Written TARGET_IP to {target_ip} in {env_file}")
-    print(f"     > Written TICK_LENGTH to {tick_length} in {env_file}")
-    print(f"     > Written REFRESH_RATE to {refresh_rate} in {env_file}")
+    print(f"     > Written CTF_START_DATE to {formatted_date} in {ENV_FILE}")
+    print(f"     > Written TARGET_IP to {target_ip} in {ENV_FILE}")
+    print(f"     > Written TICK_LENGTH to {tick_length} in {ENV_FILE}")
+    print(f"     > Written REFRESH_RATE to {refresh_rate} in {ENV_FILE}")
 
     return
 
@@ -57,28 +65,49 @@ def validate_date_format(date_str):
         return False
 
 
-def update_compose(target_ip):
-    """Update the SSH target IP in the docker-compose-c.yml file"""
+def update_compose(target_ip, key):
+    """Update target IP and SSH key in docker-compose-c.yml"""
     compose_file = "docker-compose-c.yml"
 
+    supported_algorithms = ["rsa", "ed25519", "ecdsa", "dsa"]
+    if key.lower() not in [alg.lower() for alg in supported_algorithms]:
+        print(f"[-] Error: Unsupported SSH key algorithm: {key}")
+        print(f"    Supported algorithms are: {', '.join(supported_algorithms)}")
+        sys.exit(1)
+
     if not os.path.exists(compose_file):
-        print(f"Warning: {compose_file} file not found. Cannot update SSH target IP.")
+        print(f"Warning: {compose_file} file not found. Cannot update target IP.")
         return
 
     with open(compose_file, "r") as f:
         content = f.read()
 
-    # Update SSH target IP in PCAP_COMMAND
-    pattern = r"ssh root@[\d\.:]+ -oStrictHostKeyChecking=no"
-    replacement = f"ssh root@{target_ip} -oStrictHostKeyChecking=no"
+    # Replace the Target IP
+    ip_pattern = r"ssh root@[\d\.:]+ -oStrictHostKeyChecking=no"
+    ip_replacement = f"ssh root@{target_ip} -oStrictHostKeyChecking=no"
 
-    if re.search(pattern, content):
-        modified_content = re.sub(pattern, replacement, content)
-        with open(compose_file, "w") as f:
-            f.write(modified_content)
+    if re.search(ip_pattern, content):
+        modified_content = re.sub(ip_pattern, ip_replacement, content)
         print(f"     > Updated SSH target IP to {target_ip} in {compose_file}")
     else:
-        print(f"Warning: Could not find SSH command pattern in {compose_file}")
+        print(f"[-] Warning: Could not find SSH command pattern in {compose_file}")
+        sys.exit(1)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    # Replace the SSH key path
+    key_pattern = r"~/.ssh/id_[a-zA-Z0-9_]+:/root/.ssh/id_[a-zA-Z0-9_]+:ro"
+    key_replacement = f"~/.ssh/id_{key}:/root/.ssh/id_{key}:ro"
+
+    if re.search(key_pattern, modified_content):
+        modified_content = re.sub(key_pattern, key_replacement, modified_content)
+        print(f"     > Updated SSH key path to use algorithm: {key}")
+    else:
+        print(f"[-] Warning: Could not find SSH key pattern in {compose_file}")
+        sys.exit(1)
+
+    with open(compose_file, "w") as f:
+        f.write(modified_content)
 
 
 def compose_down(compose_file):
@@ -93,7 +122,7 @@ def compose_up(compose_file, build):
     """Start containers defined in the specified docker-compose file"""
     cmd = ["docker", "compose", "-f", compose_file, "up", "-d"]
     if build:
-        cmd.append("build")
+        cmd.append("--build")
 
     print(f"[+] Executing: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
@@ -101,23 +130,12 @@ def compose_up(compose_file, build):
 
 
 def clear_suricata():
-    """Clean the Suricata output directory by recursively removing all files and subdirectories"""
-    suricata_output_path = "./suricata/output/"
+    """Clean the Suricata output directory"""
+    cmd = "sudo rm -rf ./suricata/output/*"
 
-    if os.path.exists(suricata_output_path):
-        print(f"[+] Cleaning Suricata output directory: {suricata_output_path}")
-
-        for filename in os.listdir(suricata_output_path):
-            file_path = os.path.join(suricata_output_path, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path, ignore_errors=True)
-            except Exception as e:
-                print(f"\n[-] Failed to delete {file_path}. Reason: {e}")
-
-        print(f"    Suricata output directory cleaned successfully!")
+    subprocess.run(cmd, check=True, shell=True)
+    print(f"[+] Cleaning Suricata output directory...")
+    print(f"    Suricata output directory cleaned successfully!")
 
 
 def main():
@@ -136,6 +154,7 @@ def main():
     parser.add_argument("--target-ip", "-ip", dest="target_ip", help="Specify target machine IP address (for mode C)")
     parser.add_argument("--refresh-rate", "-r", dest="refresh_rate", help="Specify refresh rate (in seconds)")
     parser.add_argument("--tick-length", "-t", dest="tick_length", help="Specify tick length (in seconds)")
+    parser.add_argument("--key", "-k", dest="key", help="Specify algorithm for SSH key exchange (default: ed25519)")
 
     args = parser.parse_args()
 
@@ -143,23 +162,23 @@ def main():
     use_mode_c = not (args.mode_a or args.mode_b) or args.mode_c
 
     # Select the appropriate docker-compose file based on the mode
-    compose_file = "docker-compose-c.yml"
+    compose_file = ""
     if args.mode_a:
-        compose_file = "docker-compose-a.yml"
+        compose_file = COMPOSE_FILES["A"]
         print("[+] Starting in mode A (pcap replay)...")
     elif args.mode_b:
-        compose_file = "docker-compose-b.yml"
+        compose_file = COMPOSE_FILES["B"]
         print("[+] Starting in mode B (capture interface)...")
     elif use_mode_c:
-        compose_file = "docker-compose-c.yml"
+        compose_file = COMPOSE_FILES["C"]
 
-    # If --down or --build is specified, stop the containers first
+        # If --down or --build is specified, stop the containers first
     if args.down or args.build:
-        compose_down(compose_file)
+        if os.path.exists(ENV_FILE): compose_down(compose_file)
         if args.down and not args.build:
             sys.exit(0)
     elif args.clear:
-        compose_down(compose_file)
+        if os.path.exists(ENV_FILE): compose_down(compose_file)
         clear_suricata()
         sys.exit(0)
     else:
@@ -194,14 +213,21 @@ def main():
             print("[-] No refresh rate specified. Please provide --refresh-rate (or -r) option.")
             sys.exit(1)
 
+        if not args.key:
+            print("[-] No SSH key exchange algorithm specified.")
+            sys.exit(1)
+
         # If target IP and date are specified, update '.env' and 'docker-compose-c.yml'
         write_env(
             start_date=args.start_date,
             target_ip=args.target_ip,
             tick_length=args.tick_length,
-            refresh_rate=args.refresh_rate
+            refresh_rate=args.refresh_rate,
         )
-        update_compose(args.target_ip)
+        update_compose(
+            target_ip=args.target_ip,
+            key=args.key
+        )
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
