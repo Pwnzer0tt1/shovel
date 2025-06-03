@@ -25,7 +25,9 @@ class FlowList {
 
         this.autoUpdateBtn.textContent = `Auto-Update: ${this.autoUpdateEnabled ? 'ON' : 'OFF'}`
         this.autoUpdateBtn.classList.add(this.autoUpdateEnabled ? 'btn-success' : 'btn-danger')
+        this.initTickProgressBar()
     }
+    
 
     async init() {
         // On left/right arrow keys, go to previous/next flow
@@ -275,6 +277,10 @@ class FlowList {
         this.refreshRate = Number(appData.refreshRate)
         this.tags = []
         this.update()
+
+        if (this.tickLength > 0) {
+            this.startTickProgress()
+        }
     }
 
     /**
@@ -339,6 +345,105 @@ class FlowList {
             badge.prepend(badgeCount)
         }
         return badge
+    }
+
+    /**
+     * Set up the tick progress bar
+     */
+    initTickProgressBar() {
+        this.tickProgressBar = null
+        this.tickInfo = null
+        this.tickTimer = null
+        this.tickProgressInterval = null
+        
+        this.initTickElements()
+    }
+
+    initTickElements() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.assignTickElements())
+        } else {
+            this.assignTickElements()
+        }
+    }
+
+    assignTickElements() {
+        this.tickProgressBar = document.getElementById('tick-progress-bar')
+        this.tickInfo = document.getElementById('tick-info')
+        this.tickTimer = document.getElementById('tick-timer')
+    }
+
+    /**
+     * Start the tick progress bar
+     */
+    startTickProgress() {
+        if (!this.tickProgressBar) {
+            this.assignTickElements()
+        }
+        
+        if (!this.tickProgressBar || !this.tickInfo || !this.tickTimer) {
+            setTimeout(() => this.startTickProgress(), 100)
+            return
+        }
+
+        if (this.tickProgressInterval) {
+            clearInterval(this.tickProgressInterval)
+        }
+
+        const updateProgress = () => {
+            if (!this.tickLength || this.tickLength <= 0) return
+            if (!this.tickProgressBar || !this.tickInfo || !this.tickTimer) return
+
+            const now = Date.now() / 1000
+            const currentTick = Math.floor((now - this.startTs) / this.tickLength)
+            const tickStartTime = this.startTs + (currentTick * this.tickLength)
+            const tickEndTime = tickStartTime + this.tickLength
+            const progress = ((now - tickStartTime) / this.tickLength) * 100
+            const remainingSeconds = Math.max(0, tickEndTime - now)
+
+            // Update the progress bar width and aria attributes
+            const clampedProgress = Math.min(100, Math.max(0, progress))
+            this.tickProgressBar.style.width = `${clampedProgress}%`
+            this.tickProgressBar.setAttribute('aria-valuenow', clampedProgress)
+
+            // Update the tick info text
+            this.tickInfo.textContent = `Tick ${currentTick}`
+            
+            // update the timer text
+            const minutes = Math.floor(remainingSeconds / 60)
+            const seconds = Math.floor(remainingSeconds % 60)
+            this.tickTimer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+
+            this.tickProgressBar.className = 'progress-bar progress-bar-striped progress-bar-animated'
+            if (progress < 50) {
+                this.tickProgressBar.classList.add('bg-success')
+            } else if (progress < 80) {
+                this.tickProgressBar.classList.add('bg-warning')
+            } else {
+                this.tickProgressBar.classList.add('bg-danger')
+            }
+        }
+
+        updateProgress()
+        this.tickProgressInterval = setInterval(updateProgress, 1000)
+    }
+
+    /**
+     * Stop the tick progress bar
+     */
+    stopTickProgress() {
+        if (this.tickProgressInterval) {
+            clearInterval(this.tickProgressInterval)
+            this.tickProgressInterval = null
+        }
+        
+        if (this.tickProgressBar && this.tickInfo && this.tickTimer) {
+            this.tickProgressBar.style.width = '0%'
+            this.tickProgressBar.setAttribute('aria-valuenow', '0')
+            this.tickProgressBar.className = 'progress-bar bg-success'
+            this.tickInfo.textContent = 'Tick 0'
+            this.tickTimer.textContent = '00:00'
+        }
     }
 
     /**
