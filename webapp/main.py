@@ -6,11 +6,8 @@ import base64
 import contextlib
 import json
 import time
-import os 
-import re
-
+import os
 import fcntl
-import random
 
 import aiosqlite
 from starlette.applications import Starlette
@@ -24,12 +21,13 @@ from starlette.templating import Jinja2Templates
 
 SERVICES_CONFIG_FILE = "./services_config.json"
 
+
 @contextlib.contextmanager
 def file_lock(file_path):
     """Context manager per file locking semplice"""
     lock_file_path = f"{file_path}.lock"
     lock_file = None
-    
+
     try:
         lock_file = open(lock_file_path, "w")
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)  # Lock Blocking
@@ -43,46 +41,47 @@ def file_lock(file_path):
             except:
                 pass
 
+
 def load_services_config():
     """Load services configuration from JSON file with file locking"""
     if not os.path.exists(SERVICES_CONFIG_FILE):
         return {}
-    
+
     with file_lock(SERVICES_CONFIG_FILE):
         try:
             with open(SERVICES_CONFIG_FILE, 'r') as f:
                 services = json.load(f)
-                
+
             for k, v in list(services.items()):
                 if isinstance(v, list):
                     services[k] = {"ipports": v, "color": "#007bff"}
-                    
+
             return services
         except (json.JSONDecodeError, FileNotFoundError):
             print(f"Errore leggendo {SERVICES_CONFIG_FILE}, ritorno dizionario vuoto")
             return {}
 
+
 def save_services_config(services):
     """Save services configuration to JSON file with file locking"""
     with file_lock(SERVICES_CONFIG_FILE):
         try:
-            temp_file = f"{SERVICES_CONFIG_FILE}.tmp"
-            with open(temp_file, 'w') as f:
+            with open(SERVICES_CONFIG_FILE, 'w') as f:
                 json.dump(services, f, indent=2)
-            
-            os.rename(temp_file, SERVICES_CONFIG_FILE)
-            
+                f.flush()
+                os.fsync(f.fileno())
+
+            print(f"Servizi salvati correttamente in {SERVICES_CONFIG_FILE}")
+
         except Exception as e:
             print(f"Errore salvando {SERVICES_CONFIG_FILE}: {e}")
-            try:
-                os.unlink(f"{SERVICES_CONFIG_FILE}.tmp")
-            except:
-                pass
             raise
+
 
 async def api_services_get(request):
     """GET /api/services - Get list of services"""
     return JSONResponse(CTF_CONFIG["services"])
+
 
 async def api_services_post(request):
     """POST /api/services - Add or update a service"""
@@ -107,15 +106,16 @@ async def api_services_post(request):
 
     return JSONResponse({"ok": True, "service": name})
 
+
 async def api_services_delete(request):
     """DELETE /api/services/{name} - Delete a service by name"""
     name = request.path_params["name"]
-    
+
     if name in CTF_CONFIG["services"]:
         del CTF_CONFIG["services"][name]
         save_services_config(CTF_CONFIG["services"])
         return JSONResponse({"ok": True})
-    
+
     raise HTTPException(404, "Servizio non trovato")
 
 
@@ -411,6 +411,7 @@ async def lifespan(app):
     yield
     await eve_database.close()
     await payload_database.close()
+
 
 # Load configuration from environment variables, then .env file
 config = Config("../.env")

@@ -125,17 +125,18 @@ class ServicesManager {
 
         const wrapper = select.parentNode
         let customDropdown = wrapper.querySelector('.custom-services-dropdown')
-        
+
         if (!customDropdown) {
             select.style.display = 'none'
-            
+
             customDropdown = document.createElement('div')
             customDropdown.className = 'custom-services-dropdown dropdown'
             customDropdown.innerHTML = `
-                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-sm shadow-none dropdown-toggle w-100 text-start py-2" type="button" data-bs-toggle="dropdown" 
+                       style="border: none; background-color: transparent; border-radius: 0; box-shadow: none !important; outline: none;">
                     <span class="dropdown-text">Select a service...</span>
                 </button>
-                <ul class="dropdown-menu w-100 custom-services-menu">
+                <ul class="dropdown-menu w-100 custom-services-menu shadow-sm">
                 </ul>
             `
             wrapper.insertBefore(customDropdown, wrapper.firstChild)
@@ -224,11 +225,11 @@ class ServicesManager {
             if (item) {
                 const value = item.getAttribute('data-value')
                 const text = item.textContent.trim()
-                
+
                 select.value = value
-                
+
                 dropdownText.textContent = text
-                
+
                 const colorMatch = item.style.borderLeft.match(/rgb\([^)]+\)|#[a-fA-F0-9]+/)
                 if (colorMatch) {
                     const borderColor = item.style.borderLeft.match(/(rgb\([^)]+\)|#[a-fA-F0-9]+)/)
@@ -240,10 +241,10 @@ class ServicesManager {
                     dropdownButton.style.borderLeft = ''
                     dropdownButton.style.backgroundColor = ''
                 }
-                
+
                 const dropdown = bootstrap.Dropdown.getInstance(dropdownButton)
                 if (dropdown) dropdown.hide()
-                
+
                 select.dispatchEvent(new Event('change'))
             }
         }
@@ -263,7 +264,7 @@ class ServicesManager {
         }
     }
 
-    
+
     getServiceBadge(ipport) {
         if (!this.isLoaded) {
             return `<span class="service-badge" style="background-color: #6c757d">Loading...</span>`
@@ -490,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('servicePorts').value = ''
             servicesManager.resetAddButton()
             servicesManager.restoreEditButton()
-            
+
             servicesManager.loadServices().then(() => {
                 window.location.reload()
             })
