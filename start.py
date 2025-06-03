@@ -14,6 +14,64 @@ COMPOSE_FILES = {
 }
 
 
+def prompt_for_missing_params(args, use_mode_c):
+    """Prompt user for missing required parameters"""
+    
+    if use_mode_c:
+        # Target IP
+        if not args.target_ip:
+            while True:
+                target_ip = input("Enter target IP address: ").strip()
+                if target_ip:
+                    args.target_ip = target_ip
+                    break
+                print("Target IP cannot be empty. Please try again.")
+        
+        # Start date
+        if not args.start_date:
+            while True:
+                start_date = input("Enter CTF start date (YYYY-MM-DDThh:mm): ").strip()
+                if start_date and validate_date_format(start_date):
+                    args.start_date = start_date
+                    break
+                elif start_date:
+                    print("Invalid date format. Please use: YYYY-MM-DDThh:mm (e.g. 2025-06-01T17:30)")
+                else:
+                    print("Start date cannot be empty. Please try again.")
+        
+        # Tick length
+        if not args.tick_length:
+            while True:
+                tick_length = input("Enter tick length (in seconds): ").strip()
+                if tick_length and tick_length.isdigit():
+                    args.tick_length = tick_length
+                    break
+                print("Tick length must be a positive number. Please try again.")
+        
+        # Refresh rate
+        if not args.refresh_rate:
+            while True:
+                refresh_rate = input("Enter refresh rate (in seconds): ").strip()
+                if refresh_rate and refresh_rate.isdigit():
+                    args.refresh_rate = refresh_rate
+                    break
+                print("Refresh rate must be a positive number. Please try again.")
+        
+        # SSH key algorithm
+        if not args.key:
+            supported_algorithms = ["rsa", "ed25519", "ecdsa", "dsa"]
+            print(f"Available SSH key algorithms: {', '.join(supported_algorithms)}")
+            while True:
+                key = input("Enter SSH key algorithm (default: ed25519): ").strip()
+                if not key:
+                    args.key = "ed25519"
+                    break
+                elif key.lower() in [alg.lower() for alg in supported_algorithms]:
+                    args.key = key.lower()
+                    break
+                print(f"Unsupported algorithm. Choose from: {', '.join(supported_algorithms)}")
+
+
 def write_env(start_date, target_ip, tick_length, refresh_rate):
     if not os.path.exists(ENV_FILE):
         print(f"[+] Warning: {ENV_FILE} file not found. Creating new file.")
@@ -194,27 +252,13 @@ def main():
     elif use_mode_c:
         print("[+] Starting in mode C (PCAP-over-IP)...")
 
-        if not args.target_ip:
-            print("[-] No target IP specified for mode C. Please provide --target-ip (or -ip) option.")
-            sys.exit(1)
+        # Prompt for missing parameters instead of exiting
+        prompt_for_missing_params(args, use_mode_c)
 
-        # Validate start date format if provided
+        # Validate start date format after prompting
         if args.start_date and not validate_date_format(args.start_date):
             print(f"[-] Invalid start date format: {args.start_date}")
-            print("    Please use ISO format: YYYY-MM-DDThh:mm (e.g. 2025-06-01T17:30)")
-            print("    Timezone +02:00 will be added automatically if not specified")
-            sys.exit(1)
-
-        if not args.tick_length:
-            print("[-] No tick length specified. Please provide --tick-length (or -t) option.")
-            sys.exit(1)
-
-        if not args.refresh_rate:
-            print("[-] No refresh rate specified. Please provide --refresh-rate (or -r) option.")
-            sys.exit(1)
-
-        if not args.key:
-            print("[-] No SSH key exchange algorithm specified.")
+            print("    This should not happen as validation is done during prompting.")
             sys.exit(1)
 
         # If target IP and date are specified, update '.env' and 'docker-compose-c.yml'
