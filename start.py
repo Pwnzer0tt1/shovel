@@ -14,6 +14,7 @@ COMPOSE_FILES = {
     "C": "docker-compose-c.yml"
 }
 
+
 # Terminal colors and formatting
 class Colors:
     HEADER = '\033[95m'
@@ -26,6 +27,7 @@ class Colors:
     UNDERLINE = '\033[4m'
     END = '\033[0m'
 
+
 def print_banner():
     """Print a nice banner for the application"""
     terminal_width = shutil.get_terminal_size().columns
@@ -35,43 +37,50 @@ def print_banner():
 ║           CTF Traffic Analysis Tool - by Pwnzer0tt1           ║
 ╚═══════════════════════════════════════════════════════════════╝
     """
-    
+
     lines = banner.strip().split('\n')
     for line in lines:
         padding = (terminal_width - len(line)) // 2
         print(" " * max(0, padding) + Colors.CYAN + Colors.BOLD + line + Colors.END)
     print()
 
+
 def print_separator(char="─", length=60):
     """Print a separator line"""
     print(Colors.BLUE + char * length + Colors.END)
+
 
 def print_success(message):
     """Print success message with green color"""
     print(f"{Colors.GREEN}✓ {message}{Colors.END}")
 
+
 def print_info(message):
     """Print info message with blue color"""
     print(f"{Colors.BLUE}ℹ {message}{Colors.END}")
+
 
 def print_warning(message):
     """Print warning message with yellow color"""
     print(f"{Colors.YELLOW}⚠ {message}{Colors.END}")
 
+
 def print_error(message):
     """Print error message with red color"""
     print(f"{Colors.RED}✗ {message}{Colors.END}")
 
+
 def print_progress(message):
     """Print progress message with cyan color"""
     print(f"{Colors.CYAN}▶ {message}{Colors.END}")
+
 
 def prompt_styled(prompt_text, required=True, default=None):
     """Styled input prompt with validation"""
     if default:
         prompt_text += f" {Colors.YELLOW}(default: {default}){Colors.END}"
     prompt_text += f" {Colors.BOLD}→{Colors.END} "
-    
+
     while True:
         try:
             user_input = input(prompt_text).strip()
@@ -85,6 +94,7 @@ def prompt_styled(prompt_text, required=True, default=None):
             print_error("Operation cancelled by user.")
             sys.exit(1)
 
+
 def show_mode_selection():
     """Display mode selection menu"""
     print_info("Available modes:")
@@ -93,14 +103,24 @@ def show_mode_selection():
     print(f"  {Colors.BOLD}C{Colors.END} - PCAP-over-IP Mode (default)")
     print()
 
+
 def prompt_for_missing_params(args, use_mode_c):
     """Prompt user for missing required parameters with styled interface"""
-    
+
+    now = datetime.now()
+    example_minute = 30
+    if now.minute < 30:
+        example_hour = now.hour - 1 if now.hour > 0 else 23
+        example_minute = 0
+    elif now.minute >= 30:
+        example_hour = now.hour
+    example_date = f"{now.year}-{now.month:02d}-{now.day:02d}T{example_hour:02d}:{example_minute:02d}"
+
     if use_mode_c:
         print_separator()
         print(f"{Colors.BOLD}{Colors.CYAN}Configuration Setup for Mode C{Colors.END}")
         print_separator()
-        
+
         # Target IP
         if not args.target_ip:
             print_info("Target IP Configuration")
@@ -110,12 +130,13 @@ def prompt_for_missing_params(args, use_mode_c):
                     args.target_ip = target_ip
                     break
                 print_error("Target IP cannot be empty. Please try again.")
-        
+
         # Start date
         if not args.start_date:
             print()
             print_info("CTF Start Date Configuration")
-            print(f"  Format: {Colors.YELLOW}YYYY-MM-DDThh:mm{Colors.END} (e.g., 2025-06-01T17:30)")
+            print_info(
+                f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm{Colors.END} {Colors.BLUE}(e.g., {example_date}){Colors.END}")
             while True:
                 start_date = prompt_styled("Enter CTF start date")
                 if start_date and validate_date_format(start_date):
@@ -125,7 +146,7 @@ def prompt_for_missing_params(args, use_mode_c):
                     print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm")
                 else:
                     print_error("Start date cannot be empty. Please try again.")
-        
+
         # Tick length
         if not args.tick_length:
             print()
@@ -136,7 +157,7 @@ def prompt_for_missing_params(args, use_mode_c):
                     args.tick_length = tick_length
                     break
                 print_error("Tick length must be a positive number. Please try again.")
-        
+
         # Refresh rate
         if not args.refresh_rate:
             print()
@@ -147,13 +168,13 @@ def prompt_for_missing_params(args, use_mode_c):
                     args.refresh_rate = refresh_rate
                     break
                 print_error("Refresh rate must be a positive number. Please try again.")
-        
+
         # SSH key algorithm
         if not args.key:
             print()
             print_info("SSH Key Algorithm Configuration")
             supported_algorithms = ["rsa", "ed25519", "ecdsa", "dsa"]
-            print(f"  Available algorithms: {Colors.YELLOW}{', '.join(supported_algorithms)}{Colors.END}")
+            print_info(f"Available algorithms: {Colors.YELLOW}{', '.join(supported_algorithms)}{Colors.END}")
             while True:
                 key = prompt_styled("Enter SSH key algorithm", default="ed25519")
                 if key.lower() in [alg.lower() for alg in supported_algorithms]:
@@ -164,6 +185,7 @@ def prompt_for_missing_params(args, use_mode_c):
         print_separator()
         print_success("Configuration completed successfully!")
         print()
+
 
 def write_env(start_date, target_ip, tick_length, refresh_rate):
     if not os.path.exists(ENV_FILE):
@@ -196,6 +218,7 @@ def write_env(start_date, target_ip, tick_length, refresh_rate):
     print(f"  {Colors.CYAN}REFRESH_RATE{Colors.END} = {refresh_rate}")
     print()
 
+
 def validate_date_format(date_str):
     """Validate the date string to be written in the correct format"""
     try:
@@ -213,6 +236,7 @@ def validate_date_format(date_str):
         return True
     except ValueError:
         return False
+
 
 def update_compose(target_ip, key):
     """Update target IP and SSH key in docker-compose-c.yml"""
@@ -256,6 +280,7 @@ def update_compose(target_ip, key):
     with open(compose_file, "w") as f:
         f.write(modified_content)
 
+
 def compose_down(compose_file):
     """Stop and remove containers defined in the specified docker-compose file"""
     cmd = ["docker", "compose", "-f", compose_file, "down"]
@@ -263,6 +288,7 @@ def compose_down(compose_file):
     subprocess.run(cmd, check=True)
     print_success("Containers successfully stopped!")
     print()
+
 
 def compose_up(compose_file, build):
     """Start containers defined in the specified docker-compose file"""
@@ -275,6 +301,7 @@ def compose_up(compose_file, build):
     print_success("Containers successfully started!")
     print()
 
+
 def clear_suricata():
     """Clean the Suricata output directory"""
     cmd = "sudo rm -rf ./suricata/output/*"
@@ -283,11 +310,12 @@ def clear_suricata():
     print_progress("Cleaning Suricata output directory...")
     print_success("Suricata output directory cleaned successfully!")
 
+
 def main():
     # Clear screen and show banner
     os.system('clear' if os.name == 'posix' else 'cls')
     print_banner()
-    
+
     parser = argparse.ArgumentParser(
         description="Start Shovel using the specified mode",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -300,7 +328,7 @@ def main():
   {Colors.CYAN}./start.py --mode-c --target-ip 192.168.1.10{Colors.END}  # Start mode C with IP
         """
     )
-    
+
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument("--mode-a", action="store_true", help="Start in mode A (pcap replay)")
     mode_group.add_argument("--mode-b", action="store_true", help="Start in mode B (capture interface)")
@@ -308,7 +336,8 @@ def main():
 
     parser.add_argument("--down", dest="down", action="store_true", help="Stop containers listed in docker-compose")
     parser.add_argument("--build", "-b", dest="build", action="store_true", help="Rebuild images before starting them")
-    parser.add_argument("--clear", "-c", dest="clear", action="store_true", help="Clean Suricata output and stop containers")
+    parser.add_argument("--clear", "-c", dest="clear", action="store_true",
+                        help="Clean Suricata output and stop containers")
 
     parser.add_argument("--date", dest="start_date",
                         help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz, timezone +02:00 added if not specified)")
@@ -335,13 +364,13 @@ def main():
 
     # Handle special actions
     if args.down or args.build:
-        if os.path.exists(ENV_FILE): 
+        if os.path.exists(ENV_FILE):
             compose_down(compose_file)
         if args.down and not args.build:
             print_success("Operation completed successfully!")
             sys.exit(0)
     elif args.clear:
-        if os.path.exists(ENV_FILE): 
+        if os.path.exists(ENV_FILE):
             compose_down(compose_file)
         clear_suricata()
         print_success("Clean operation completed successfully!")
@@ -397,6 +426,7 @@ def main():
     print_success(f"Shovel successfully started in mode {'A' if args.mode_a else 'B' if args.mode_b else 'C'}!")
     print(f"  {Colors.BOLD}Web interface:{Colors.END} {Colors.CYAN}http://127.0.0.1:8000{Colors.END}")
     print_separator("═", 60)
+
 
 if __name__ == "__main__":
     main()
