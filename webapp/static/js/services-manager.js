@@ -34,7 +34,7 @@ class ServicesManager {
             return
         }
 
-        const defaultIp = document.getElementById('app').dataset.defaultIp || '10.60.2.1'
+        const defaultIp = document.getElementById('serviceIP').value
         const ipports = ports.map(port => `${defaultIp}:${port}`)
 
         const payload = {
@@ -123,6 +123,43 @@ class ServicesManager {
         select.innerHTML = ''
         optionsToKeep.forEach(opt => select.appendChild(opt))
 
+        const wrapper = select.parentNode
+        let customDropdown = wrapper.querySelector('.custom-services-dropdown')
+        
+        if (!customDropdown) {
+            select.style.display = 'none'
+            
+            customDropdown = document.createElement('div')
+            customDropdown.className = 'custom-services-dropdown dropdown'
+            customDropdown.innerHTML = `
+                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown">
+                    <span class="dropdown-text">Select a service...</span>
+                </button>
+                <ul class="dropdown-menu w-100 custom-services-menu">
+                </ul>
+            `
+            wrapper.insertBefore(customDropdown, wrapper.firstChild)
+        }
+
+        const dropdownButton = customDropdown.querySelector('button')
+        const dropdownMenu = customDropdown.querySelector('.dropdown-menu')
+        const dropdownText = customDropdown.querySelector('.dropdown-text')
+
+        dropdownMenu.innerHTML = ''
+        optionsToKeep.forEach(option => {
+            if (option.tagName === 'OPTION') {
+                const li = document.createElement('li')
+                li.innerHTML = `<a class="dropdown-item" href="#" data-value="${option.value}">${option.textContent}</a>`
+                dropdownMenu.appendChild(li)
+            }
+        })
+
+        if (Object.keys(this.services).length > 0) {
+            const separator = document.createElement('li')
+            separator.innerHTML = '<hr class="dropdown-divider">'
+            dropdownMenu.appendChild(separator)
+        }
+
         Object.entries(this.services).forEach(([name, serviceData]) => {
             const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
             const color = serviceData.color || '#007bff'
@@ -130,7 +167,7 @@ class ServicesManager {
             const optgroup = document.createElement('optgroup')
             optgroup.label = name
             optgroup.dataset.ipports = ipports.join(' ')
-            optgroup.dataset.color = color // Add color
+            optgroup.dataset.color = color
 
             if (ipports.length > 1) {
                 const allOption = document.createElement('option')
@@ -147,11 +184,86 @@ class ServicesManager {
             })
 
             select.appendChild(optgroup)
+
+            const groupHeader = document.createElement('li')
+            groupHeader.innerHTML = `
+                <h6 class="dropdown-header d-flex align-items-center" style="background: linear-gradient(90deg, ${color} 0%, ${color} 4px, transparent 4px); padding-left: 12px;">
+                    <span class="me-2" style="width: 12px; height: 12px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
+                    ${name}
+                </h6>
+            `
+            dropdownMenu.appendChild(groupHeader)
+
+            if (ipports.length > 1) {
+                const allLi = document.createElement('li')
+                allLi.innerHTML = `
+                    <a class="dropdown-item ps-4" href="#" data-value="${ipports.join(',')}" style="border-left: 3px solid ${color};">
+                        <span class="me-2" style="width: 8px; height: 8px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
+                        🔵 All (${name})
+                    </a>
+                `
+                dropdownMenu.appendChild(allLi)
+            }
+
+            ipports.forEach(ipport => {
+                const li = document.createElement('li')
+                li.innerHTML = `
+                    <a class="dropdown-item ps-4" href="#" data-value="${ipport}" style="border-left: 3px solid ${color};">
+                        <span class="me-2" style="width: 8px; height: 8px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
+                        • ${ipport} <span class="text-secondary">(${name})</span>
+                    </a>
+                `
+                dropdownMenu.appendChild(li)
+            })
         })
 
+        dropdownMenu.removeEventListener('click', this.dropdownClickHandler)
+        this.dropdownClickHandler = (e) => {
+            e.preventDefault()
+            const item = e.target.closest('a[data-value]')
+            if (item) {
+                const value = item.getAttribute('data-value')
+                const text = item.textContent.trim()
+                
+                select.value = value
+                
+                dropdownText.textContent = text
+                
+                const colorMatch = item.style.borderLeft.match(/rgb\([^)]+\)|#[a-fA-F0-9]+/)
+                if (colorMatch) {
+                    const borderColor = item.style.borderLeft.match(/(rgb\([^)]+\)|#[a-fA-F0-9]+)/)
+                    if (borderColor) {
+                        dropdownButton.style.borderLeft = `4px solid ${borderColor[1]}`
+                        dropdownButton.style.backgroundColor = `${borderColor[1]}20` // 20% opacity
+                    }
+                } else {
+                    dropdownButton.style.borderLeft = ''
+                    dropdownButton.style.backgroundColor = ''
+                }
+                
+                const dropdown = bootstrap.Dropdown.getInstance(dropdownButton)
+                if (dropdown) dropdown.hide()
+                
+                select.dispatchEvent(new Event('change'))
+            }
+        }
+        dropdownMenu.addEventListener('click', this.dropdownClickHandler)
+
         select.value = currentValue
+        if (currentValue) {
+            const matchingItem = dropdownMenu.querySelector(`a[data-value="${currentValue}"]`)
+            if (matchingItem) {
+                dropdownText.textContent = matchingItem.textContent.trim()
+                const borderColor = matchingItem.style.borderLeft.match(/(rgb\([^)]+\)|#[a-fA-F0-9]+)/)
+                if (borderColor) {
+                    dropdownButton.style.borderLeft = `4px solid ${borderColor[1]}`
+                    dropdownButton.style.backgroundColor = `${borderColor[1]}20`
+                }
+            }
+        }
     }
 
+    
     getServiceBadge(ipport) {
         if (!this.isLoaded) {
             return `<span class="service-badge" style="background-color: #6c757d">Loading...</span>`
@@ -207,7 +319,7 @@ class ServicesManager {
                             ${name}
                         </h6>
                         <div class="text-muted small">
-                            ${ipports.map(ip => `<span class="badge bg-light text-dark border me-1 mb-1">${ip}</span>`).join('')}
+                            ${ipports.map(ip => `<span class="badge bg-light text-dark border me-1 mb-1">${ip} <span class="text-secondary">(${name})</span></span>`).join('')}
                         </div>
                     </div>
                     <div class="btn-group d-flex align-items-center">

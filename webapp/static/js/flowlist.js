@@ -308,7 +308,7 @@ class FlowList {
                 if (name) {
                     return `<span class="service-badge" style="background-color: ${serviceColor}">${name}</span> (:${port})`
                 } else {
-                    return `<span class="service-badge" style="background-color: ${serviceColor}">${ipport}</span>`
+                    return servicesManager.getServiceBadge(ipport)
                 }
             }
         }
@@ -316,7 +316,7 @@ class FlowList {
         if (name) {
             return `<span class="service-badge" style="background-color: ${color}">${name}</span> (:${port})`
         } else {
-            return `<span class="service-badge" style="background-color: #6c757d">${ipport}</span>`
+            return servicesManager.getServiceBadge(ipport)
         }
     }
 

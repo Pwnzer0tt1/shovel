@@ -43,21 +43,6 @@ def file_lock(file_path):
             except:
                 pass
 
-def extract_ip_from_pcap_command():
-    """Estrae l'IP dalla variabile d'ambiente o fallback"""
-    
-    target_ip = config("TARGET_IP", cast=str, default="")
-    if target_ip:
-        return target_ip
-    
-    pcap_command = config("PCAP_COMMAND", cast=str, default="")
-    if pcap_command:
-        ip_match = re.search(r'ssh\s+\w+@([\d.]+)', pcap_command)
-        if ip_match:
-            return ip_match.group(1)
-    
-    return "10.60.2.1"
-
 def load_services_config():
     """Load services configuration from JSON file with file locking"""
     if not os.path.exists(SERVICES_CONFIG_FILE):
@@ -439,7 +424,7 @@ PAYLOAD_DB_URI = config(
 CTF_CONFIG = {
     "start_date": config("CTF_START_DATE", cast=str, default="1970-01-01T00:00+00:00"),
     "tick_length": config("CTF_TICK_LENGTH", cast=int, default=0),
-    "default_ip": extract_ip_from_pcap_command(),
+    "default_ip": config("TARGET_IP", cast=str, default=""),
     "services": {},
 }
 
