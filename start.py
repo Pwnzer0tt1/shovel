@@ -5,6 +5,7 @@ import subprocess
 import sys
 import re
 from datetime import datetime
+import shutil
 
 ENV_FILE = ".env"
 COMPOSE_FILES = {
@@ -13,72 +14,164 @@ COMPOSE_FILES = {
     "C": "docker-compose-c.yml"
 }
 
+# Terminal colors and formatting
+class Colors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+def print_banner():
+    """Print a nice banner for the application"""
+    terminal_width = shutil.get_terminal_size().columns
+    banner = """
+╔═══════════════════════════════════════════════════════════════╗
+║                       SHOVEL - SURICATA                       ║
+║           CTF Traffic Analysis Tool - by Pwnzer0tt1           ║
+╚═══════════════════════════════════════════════════════════════╝
+    """
+    
+    lines = banner.strip().split('\n')
+    for line in lines:
+        padding = (terminal_width - len(line)) // 2
+        print(" " * max(0, padding) + Colors.CYAN + Colors.BOLD + line + Colors.END)
+    print()
+
+def print_separator(char="─", length=60):
+    """Print a separator line"""
+    print(Colors.BLUE + char * length + Colors.END)
+
+def print_success(message):
+    """Print success message with green color"""
+    print(f"{Colors.GREEN}✓ {message}{Colors.END}")
+
+def print_info(message):
+    """Print info message with blue color"""
+    print(f"{Colors.BLUE}ℹ {message}{Colors.END}")
+
+def print_warning(message):
+    """Print warning message with yellow color"""
+    print(f"{Colors.YELLOW}⚠ {message}{Colors.END}")
+
+def print_error(message):
+    """Print error message with red color"""
+    print(f"{Colors.RED}✗ {message}{Colors.END}")
+
+def print_progress(message):
+    """Print progress message with cyan color"""
+    print(f"{Colors.CYAN}▶ {message}{Colors.END}")
+
+def prompt_styled(prompt_text, required=True, default=None):
+    """Styled input prompt with validation"""
+    if default:
+        prompt_text += f" {Colors.YELLOW}(default: {default}){Colors.END}"
+    prompt_text += f" {Colors.BOLD}→{Colors.END} "
+    
+    while True:
+        try:
+            user_input = input(prompt_text).strip()
+            if not user_input and default:
+                return default
+            if user_input or not required:
+                return user_input
+            print_error("This field cannot be empty. Please try again.")
+        except KeyboardInterrupt:
+            print("\n")
+            print_error("Operation cancelled by user.")
+            sys.exit(1)
+
+def show_mode_selection():
+    """Display mode selection menu"""
+    print_info("Available modes:")
+    print(f"  {Colors.BOLD}A{Colors.END} - PCAP Replay Mode")
+    print(f"  {Colors.BOLD}B{Colors.END} - Capture Interface Mode")
+    print(f"  {Colors.BOLD}C{Colors.END} - PCAP-over-IP Mode (default)")
+    print()
 
 def prompt_for_missing_params(args, use_mode_c):
-    """Prompt user for missing required parameters"""
+    """Prompt user for missing required parameters with styled interface"""
     
     if use_mode_c:
+        print_separator()
+        print(f"{Colors.BOLD}{Colors.CYAN}Configuration Setup for Mode C{Colors.END}")
+        print_separator()
+        
         # Target IP
         if not args.target_ip:
+            print_info("Target IP Configuration")
             while True:
-                target_ip = input("Enter target IP address: ").strip()
+                target_ip = prompt_styled("Enter target IP address")
                 if target_ip:
                     args.target_ip = target_ip
                     break
-                print("Target IP cannot be empty. Please try again.")
+                print_error("Target IP cannot be empty. Please try again.")
         
         # Start date
         if not args.start_date:
+            print()
+            print_info("CTF Start Date Configuration")
+            print(f"  Format: {Colors.YELLOW}YYYY-MM-DDThh:mm{Colors.END} (e.g., 2025-06-01T17:30)")
             while True:
-                start_date = input("Enter CTF start date (YYYY-MM-DDThh:mm): ").strip()
+                start_date = prompt_styled("Enter CTF start date")
                 if start_date and validate_date_format(start_date):
                     args.start_date = start_date
                     break
                 elif start_date:
-                    print("Invalid date format. Please use: YYYY-MM-DDThh:mm (e.g. 2025-06-01T17:30)")
+                    print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm")
                 else:
-                    print("Start date cannot be empty. Please try again.")
+                    print_error("Start date cannot be empty. Please try again.")
         
         # Tick length
         if not args.tick_length:
+            print()
+            print_info("Tick Length Configuration")
             while True:
-                tick_length = input("Enter tick length (in seconds): ").strip()
+                tick_length = prompt_styled("Enter tick length (in seconds)")
                 if tick_length and tick_length.isdigit():
                     args.tick_length = tick_length
                     break
-                print("Tick length must be a positive number. Please try again.")
+                print_error("Tick length must be a positive number. Please try again.")
         
         # Refresh rate
         if not args.refresh_rate:
+            print()
+            print_info("Refresh Rate Configuration")
             while True:
-                refresh_rate = input("Enter refresh rate (in seconds): ").strip()
+                refresh_rate = prompt_styled("Enter refresh rate (in seconds)")
                 if refresh_rate and refresh_rate.isdigit():
                     args.refresh_rate = refresh_rate
                     break
-                print("Refresh rate must be a positive number. Please try again.")
+                print_error("Refresh rate must be a positive number. Please try again.")
         
         # SSH key algorithm
         if not args.key:
+            print()
+            print_info("SSH Key Algorithm Configuration")
             supported_algorithms = ["rsa", "ed25519", "ecdsa", "dsa"]
-            print(f"Available SSH key algorithms: {', '.join(supported_algorithms)}")
+            print(f"  Available algorithms: {Colors.YELLOW}{', '.join(supported_algorithms)}{Colors.END}")
             while True:
-                key = input("Enter SSH key algorithm (default: ed25519): ").strip()
-                if not key:
-                    args.key = "ed25519"
-                    break
-                elif key.lower() in [alg.lower() for alg in supported_algorithms]:
+                key = prompt_styled("Enter SSH key algorithm", default="ed25519")
+                if key.lower() in [alg.lower() for alg in supported_algorithms]:
                     args.key = key.lower()
                     break
-                print(f"Unsupported algorithm. Choose from: {', '.join(supported_algorithms)}")
+                print_error(f"Unsupported algorithm. Choose from: {', '.join(supported_algorithms)}")
 
+        print_separator()
+        print_success("Configuration completed successfully!")
+        print()
 
 def write_env(start_date, target_ip, tick_length, refresh_rate):
     if not os.path.exists(ENV_FILE):
-        print(f"[+] Warning: {ENV_FILE} file not found. Creating new file.")
+        print_warning(f"{ENV_FILE} file not found. Creating new file.")
         with open(ENV_FILE, "w") as f:
             f.write("")
     else:
-        print(f"[+] Updating {ENV_FILE} file.")
+        print_info(f"Updating {ENV_FILE} file.")
 
     with open(ENV_FILE, "w") as f:
         content = ""
@@ -96,13 +189,12 @@ def write_env(start_date, target_ip, tick_length, refresh_rate):
 
         f.write(content)
 
-    print(f"     > Written CTF_START_DATE to {formatted_date} in {ENV_FILE}")
-    print(f"     > Written TARGET_IP to {target_ip} in {ENV_FILE}")
-    print(f"     > Written CTF_TICK_LENGTH to {tick_length} in {ENV_FILE}")
-    print(f"     > Written REFRESH_RATE to {refresh_rate} in {ENV_FILE}")
-
-    return
-
+    print_success(f"Environment variables written to {ENV_FILE}")
+    print(f"  {Colors.CYAN}CTF_START_DATE{Colors.END} = {formatted_date}")
+    print(f"  {Colors.CYAN}TARGET_IP{Colors.END} = {target_ip}")
+    print(f"  {Colors.CYAN}CTF_TICK_LENGTH{Colors.END} = {tick_length}")
+    print(f"  {Colors.CYAN}REFRESH_RATE{Colors.END} = {refresh_rate}")
+    print()
 
 def validate_date_format(date_str):
     """Validate the date string to be written in the correct format"""
@@ -122,19 +214,18 @@ def validate_date_format(date_str):
     except ValueError:
         return False
 
-
 def update_compose(target_ip, key):
     """Update target IP and SSH key in docker-compose-c.yml"""
     compose_file = "docker-compose-c.yml"
 
     supported_algorithms = ["rsa", "ed25519", "ecdsa", "dsa"]
     if key.lower() not in [alg.lower() for alg in supported_algorithms]:
-        print(f"[-] Error: Unsupported SSH key algorithm: {key}")
+        print_error(f"Unsupported SSH key algorithm: {key}")
         print(f"    Supported algorithms are: {', '.join(supported_algorithms)}")
         sys.exit(1)
 
     if not os.path.exists(compose_file):
-        print(f"Warning: {compose_file} file not found. Cannot update target IP.")
+        print_warning(f"{compose_file} file not found. Cannot update target IP.")
         return
 
     with open(compose_file, "r") as f:
@@ -146,12 +237,10 @@ def update_compose(target_ip, key):
 
     if re.search(ip_pattern, content):
         modified_content = re.sub(ip_pattern, ip_replacement, content)
-        print(f"     > Updated SSH target IP to {target_ip} in {compose_file}")
+        print_success(f"Updated SSH target IP to {target_ip} in {compose_file}")
     else:
-        print(f"[-] Warning: Could not find SSH command pattern in {compose_file}")
+        print_error(f"Could not find SSH command pattern in {compose_file}")
         sys.exit(1)
-
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # Replace the SSH key path
     key_pattern = r"~/.ssh/id_[a-zA-Z0-9_]+:/root/.ssh/id_[a-zA-Z0-9_]+:ro"
@@ -159,22 +248,21 @@ def update_compose(target_ip, key):
 
     if re.search(key_pattern, modified_content):
         modified_content = re.sub(key_pattern, key_replacement, modified_content)
-        print(f"     > Updated SSH key path to use algorithm: {key}")
+        print_success(f"Updated SSH key path to use algorithm: {key}")
     else:
-        print(f"[-] Warning: Could not find SSH key pattern in {compose_file}")
+        print_error(f"Could not find SSH key pattern in {compose_file}")
         sys.exit(1)
 
     with open(compose_file, "w") as f:
         f.write(modified_content)
 
-
 def compose_down(compose_file):
     """Stop and remove containers defined in the specified docker-compose file"""
     cmd = ["docker", "compose", "-f", compose_file, "down"]
-    print(f"[+] Executing: {' '.join(cmd)}")
+    print_progress(f"Executing: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
-    print("\n[+] Containers successfully stopped!\n")
-
+    print_success("Containers successfully stopped!")
+    print()
 
 def compose_up(compose_file, build):
     """Start containers defined in the specified docker-compose file"""
@@ -182,22 +270,37 @@ def compose_up(compose_file, build):
     if build:
         cmd.append("--build")
 
-    print(f"[+] Executing: {' '.join(cmd)}")
+    print_progress(f"Executing: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
-    print("\n[+] Containers successfully started!\n")
-
+    print_success("Containers successfully started!")
+    print()
 
 def clear_suricata():
     """Clean the Suricata output directory"""
     cmd = "sudo rm -rf ./suricata/output/*"
 
     subprocess.run(cmd, check=True, shell=True)
-    print(f"[+] Cleaning Suricata output directory...")
-    print(f"    Suricata output directory cleaned successfully!")
-
+    print_progress("Cleaning Suricata output directory...")
+    print_success("Suricata output directory cleaned successfully!")
 
 def main():
-    parser = argparse.ArgumentParser(description="Start Shovel using the specified mode")
+    # Clear screen and show banner
+    os.system('clear' if os.name == 'posix' else 'cls')
+    print_banner()
+    
+    parser = argparse.ArgumentParser(
+        description="Start Shovel using the specified mode",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"""
+{Colors.BOLD}Examples:{Colors.END}
+  {Colors.CYAN}./start.py --build{Colors.END}                    # Start in mode C with build
+  {Colors.CYAN}./start.py --mode-a{Colors.END}                   # Start in mode A
+  {Colors.CYAN}./start.py --down{Colors.END}                     # Stop containers
+  {Colors.CYAN}./start.py --clear{Colors.END}                    # Clean and stop
+  {Colors.CYAN}./start.py --mode-c --target-ip 192.168.1.10{Colors.END}  # Start mode C with IP
+        """
+    )
+    
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument("--mode-a", action="store_true", help="Start in mode A (pcap replay)")
     mode_group.add_argument("--mode-b", action="store_true", help="Start in mode B (capture interface)")
@@ -205,7 +308,7 @@ def main():
 
     parser.add_argument("--down", dest="down", action="store_true", help="Stop containers listed in docker-compose")
     parser.add_argument("--build", "-b", dest="build", action="store_true", help="Rebuild images before starting them")
-    parser.add_argument("--clear", "-c", dest="clear", action="store_true", help="Rebuild images before starting them")
+    parser.add_argument("--clear", "-c", dest="clear", action="store_true", help="Clean Suricata output and stop containers")
 
     parser.add_argument("--date", dest="start_date",
                         help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz, timezone +02:00 added if not specified)")
@@ -223,42 +326,47 @@ def main():
     compose_file = ""
     if args.mode_a:
         compose_file = COMPOSE_FILES["A"]
-        print("[+] Starting in mode A (pcap replay)...")
+        print_info("Starting in mode A (pcap replay)...")
     elif args.mode_b:
         compose_file = COMPOSE_FILES["B"]
-        print("[+] Starting in mode B (capture interface)...")
+        print_info("Starting in mode B (capture interface)...")
     elif use_mode_c:
         compose_file = COMPOSE_FILES["C"]
 
-        # If --down or --build is specified, stop the containers first
+    # Handle special actions
     if args.down or args.build:
-        if os.path.exists(ENV_FILE): compose_down(compose_file)
+        if os.path.exists(ENV_FILE): 
+            compose_down(compose_file)
         if args.down and not args.build:
+            print_success("Operation completed successfully!")
             sys.exit(0)
     elif args.clear:
-        if os.path.exists(ENV_FILE): compose_down(compose_file)
+        if os.path.exists(ENV_FILE): 
+            compose_down(compose_file)
         clear_suricata()
+        print_success("Clean operation completed successfully!")
         sys.exit(0)
     else:
-        print("[-] No relevant action specified (down, build, clear). Use -h for help.")
+        print_error("No relevant action specified (down, build, clear).")
+        print(f"Use {Colors.YELLOW}-h{Colors.END} for help.")
         sys.exit(1)
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    print_separator()
 
     if args.mode_a:
-        print("[+] Starting in mode A (pcap replay)...")
+        print_progress("Initializing mode A (pcap replay)...")
     elif args.mode_b:
-        print("[+] Starting in mode B (capture interface)...")
+        print_progress("Initializing mode B (capture interface)...")
     elif use_mode_c:
-        print("[+] Starting in mode C (PCAP-over-IP)...")
+        print_progress("Initializing mode C (PCAP-over-IP)...")
 
         # Prompt for missing parameters instead of exiting
         prompt_for_missing_params(args, use_mode_c)
 
         # Validate start date format after prompting
         if args.start_date and not validate_date_format(args.start_date):
-            print(f"[-] Invalid start date format: {args.start_date}")
-            print("    This should not happen as validation is done during prompting.")
+            print_error(f"Invalid start date format: {args.start_date}")
+            print("This should not happen as validation is done during prompting.")
             sys.exit(1)
 
         # If target IP and date are specified, update '.env' and 'docker-compose-c.yml'
@@ -273,23 +381,22 @@ def main():
             key=args.key
         )
 
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
         # Create a new file 'services_config.json' empty
         json_config = "services_config.json"
         if not os.path.exists(json_config):
-            print(f"[+] Creating empty {json_config} file.")
+            print_info(f"Creating empty {json_config} file.")
             with open(json_config, "w") as f:
                 f.write("{}")
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    print_separator()
 
     # Start the containers using the selected docker-compose file
     compose_up(compose_file, args.build)
 
-    print(f"\n[+] Shovel successfully started in mode {'A' if args.mode_a else 'B' if args.mode_b else 'C'}!")
-    print(f"    Web interface is available at: http://127.0.0.1:8000")
-
+    print_separator("═", 60)
+    print_success(f"Shovel successfully started in mode {'A' if args.mode_a else 'B' if args.mode_b else 'C'}!")
+    print(f"  {Colors.BOLD}Web interface:{Colors.END} {Colors.CYAN}http://127.0.0.1:8000{Colors.END}")
+    print_separator("═", 60)
 
 if __name__ == "__main__":
     main()
