@@ -75,10 +75,12 @@ def print_progress(message):
     print(f"{Colors.CYAN}▶ {message}{Colors.END}")
 
 
-def prompt_styled(prompt_text, required=True, default=None):
+def prompt_styled(prompt_text, required=True, default=None, current=None):
     """Styled input prompt with validation"""
     if default:
         prompt_text += f" {Colors.YELLOW}(default: {default}){Colors.END}"
+    if current:
+        prompt_text += f" {Colors.YELLOW}(current: {current}){Colors.END}"
     prompt_text += f" {Colors.BOLD}→{Colors.END} "
 
     while True:
@@ -86,6 +88,8 @@ def prompt_styled(prompt_text, required=True, default=None):
             user_input = input(prompt_text).strip()
             if not user_input and default:
                 return default
+            if not user_input and current:
+                return current
             if user_input or not required:
                 return user_input
             print_error("This field cannot be empty. Please try again.")
@@ -147,7 +151,7 @@ def prompt_for_missing_params(args, use_mode_c):
     """Prompt user for missing required parameters with styled interface"""
 
     now = datetime.now()
-    example_date = f"{now.year}-{now.month:02d}-{now.day:02d}T{now.hour}:"
+    example_date = f"{now.year}-{now.month:02d}-{now.day:02d}T{now.hour:02d}:"
     if now.minute < 30:
         example_date += "00"
     elif now.minute >= 30:
@@ -179,11 +183,11 @@ def prompt_for_missing_params(args, use_mode_c):
                     print_error("Target IP cannot be empty. Please try again.")
 
         # No date added
-        wrong_tz = False
+        start_date = ""
         if not args.start_date:
             print()
             print_info("CTF Start Date Configuration")
-            print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm {Colors.BLUE}(e.g., {example_date}){Colors.END}")
+            print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm+ZZ:zz {Colors.BLUE}(e.g., {example_date}){Colors.END}")
 
             while True:
                 start_date = prompt_styled("Enter CTF start date")
@@ -191,12 +195,9 @@ def prompt_for_missing_params(args, use_mode_c):
                     args.start_date = start_date
                     break
                 elif start_date:
-                    print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm")
+                    print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm+ZZ:zz")
                 else:
                     print_error("Start date cannot be empty. Please try again.")
-
-            if not validate_timezone(start_date):
-                wrong_tz = True
         else:
             # Check if added date is correct
             if not validate_date_format(args.start_date):
@@ -209,18 +210,12 @@ def prompt_for_missing_params(args, use_mode_c):
                         args.start_date = start_date
                         break
                     elif start_date:
-                        print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm")
+                        print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm+ZZ:zz")
                     else:
                         print_error("Start date cannot be empty. Please try again.")
 
-                if not validate_timezone(start_date):
-                    wrong_tz = True
-            else:
-                if not validate_timezone(args.start_date):
-                    wrong_tz = True
-
         # Request for timezone, if not specified
-        if wrong_tz:
+        if not validate_timezone(start_date):
             print()
             print_warning("Timezone not inserted or wrong.")
             print()
@@ -229,7 +224,7 @@ def prompt_for_missing_params(args, use_mode_c):
             print_info(f"Format: {Colors.YELLOW}+/-HH:MM {Colors.END}")
 
             while True:
-                tz = prompt_styled("Enter timezone", default=current_tz)
+                tz = prompt_styled("Enter timezone", current=current_tz)
                 if validate_timezone(args.start_date + tz):
                     args.start_date = f"{args.start_date}{tz}"
                     break
@@ -389,9 +384,9 @@ def prompt_for_action():
     print_separator()
     print(f"{Colors.BOLD}{Colors.CYAN}Action Selection{Colors.END}")
     print_separator()
-    
+
     show_action_selection()
-    
+
     while True:
         action = prompt_styled("Enter action (build/down/clear)").strip().lower()
         if action in ['build', 'down', 'clear']:
@@ -437,7 +432,7 @@ def main():
 
     # Check if any action argument was provided
     action_provided = args.build or args.down or args.clear
-    
+
     # If no action is provided, enter interactive mode
     if not action_provided:
         action = prompt_for_action()
