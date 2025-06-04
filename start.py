@@ -104,17 +104,55 @@ def show_mode_selection():
     print()
 
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def get_tz():
+    """Get the current timezone in 00:00 format"""
+    now = datetime.now()
+    tz = now.astimezone().strftime('%:z')
+    return tz
+
+
+def validate_date_format(date_str):
+    """Validate the date string format (YYYY-MM-DDThh:mm) without timezone validation"""
+    # Check basic format first (date + time)
+    try:
+        basic_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}"
+        if not re.match(basic_pattern, date_str):
+            return False
+
+        datetime.fromisoformat(date_str[:16])
+        return True
+    except ValueError:
+        return False
+
+
+def validate_timezone(date_str):
+    """Validate the timezone string in format +/-HH:MM"""
+    has_tz = ('+' in date_str or '-' in date_str[16:])
+    if not has_tz:
+        return None
+
+    try:
+        if not re.match(r"^[+-]\d{2}:\d{2}$", date_str[16:]):
+            return False
+
+        datetime.fromisoformat(date_str)
+        return True
+    except (ValueError, IndexError):
+        return False
+
+
 def prompt_for_missing_params(args, use_mode_c):
     """Prompt user for missing required parameters with styled interface"""
 
     now = datetime.now()
-    example_minute = 30
+    example_date = f"{now.year}-{now.month:02d}-{now.day:02d}T{now.hour}:"
     if now.minute < 30:
-        example_hour = now.hour - 1 if now.hour > 0 else 23
-        example_minute = 0
+        example_date += "00"
     elif now.minute >= 30:
-        example_hour = now.hour
-    example_date = f"{now.year}-{now.month:02d}-{now.day:02d}T{example_hour:02d}:{example_minute:02d}"
+        example_date += "30"
+    example_date += get_tz()
 
     if use_mode_c:
         print_separator()
@@ -127,18 +165,28 @@ def prompt_for_missing_params(args, use_mode_c):
             while True:
                 target_ip = prompt_styled("Enter target IP address")
                 if target_ip:
-                    args.target_ip = target_ip
-                    break
-                print_error("Target IP cannot be empty. Please try again.")
+                    if re.match(r'^(\d{1,3}\.){3}\d{1,3}$', target_ip):
+                        octets = target_ip.split('.')
+                        valid_octets = all(0 <= int(octet) <= 255 for octet in octets)
+                        if valid_octets:
+                            args.target_ip = target_ip
+                            break
+                        else:
+                            print_error("IP address octets must be between 0-255. Please try again.")
+                    else:
+                        print_error("Invalid IP address format. Please use format: xxx.xxx.xxx.xxx")
+                else:
+                    print_error("Target IP cannot be empty. Please try again.")
 
-        # Start date
+        # No date added
+        wrong_tz = False
         if not args.start_date:
             print()
             print_info("CTF Start Date Configuration")
-            print_info(
-                f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm{Colors.END} {Colors.BLUE}(e.g., {example_date}){Colors.END}")
+            print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm {Colors.BLUE}(e.g., {example_date}){Colors.END}")
+
             while True:
-                start_date = prompt_styled("Enter CTF start date")
+                start_date = prompt_styled("Enter CTF start date (without timezone)")
                 if start_date and validate_date_format(start_date):
                     args.start_date = start_date
                     break
@@ -146,6 +194,46 @@ def prompt_for_missing_params(args, use_mode_c):
                     print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm")
                 else:
                     print_error("Start date cannot be empty. Please try again.")
+
+            if not validate_timezone(start_date):
+                wrong_tz = True
+        else:
+            # Check if added date is correct
+            if not validate_date_format(args.start_date):
+                print_error(f"Invalid date format: {args.start_date}")
+                print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm {Colors.BLUE}(e.g., {example_date}){Colors.END}")
+
+                while True:
+                    start_date = prompt_styled("Enter CTF start date: ")
+                    if start_date and validate_date_format(start_date):
+                        args.start_date = start_date
+                        break
+                    elif start_date:
+                        print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm")
+                    else:
+                        print_error("Start date cannot be empty. Please try again.")
+
+                if not validate_timezone(start_date):
+                    wrong_tz = True
+            else:
+                if not validate_timezone(args.start_date):
+                    wrong_tz = True
+
+        # Request for timezone, if not specified
+        if wrong_tz:
+            print()
+            print_warning("Timezone not inserted or wrong.")
+            print()
+            print_info("Timezone Configuration")
+            current_tz = get_tz()
+            print_info(f"Format: {Colors.YELLOW}+/-HH:MM {Colors.END}")
+
+            while True:
+                tz = prompt_styled("Enter timezone", default=current_tz)
+                if validate_timezone(args.start_date + tz):
+                    args.start_date = f"{args.start_date}{tz}"
+                    break
+                print_error(f"Invalid timezone format. Please use +/-HH:MM")
 
         # Tick length
         if not args.tick_length:
@@ -198,13 +286,8 @@ def write_env(start_date, target_ip, tick_length, refresh_rate):
     with open(ENV_FILE, "w") as f:
         content = ""
 
-        # Ensure date has timezone information
-        if not ('+' in start_date or '-' in start_date[10:]):
-            formatted_date = f"{start_date}+02:00"
-        else:
-            formatted_date = start_date
-
-        content += f"CTF_START_DATE={formatted_date}\n"
+        # Everything has been already validated
+        content += f"CTF_START_DATE={start_date}\n"
         content += f"CTF_TICK_LENGTH={tick_length}\n"
         content += f"TARGET_IP={target_ip}\n"
         content += f"REFRESH_RATE={refresh_rate}\n"
@@ -212,30 +295,11 @@ def write_env(start_date, target_ip, tick_length, refresh_rate):
         f.write(content)
 
     print_success(f"Environment variables written to {ENV_FILE}")
-    print(f"  {Colors.CYAN}CTF_START_DATE{Colors.END} = {formatted_date}")
+    print(f"  {Colors.CYAN}CTF_START_DATE{Colors.END} = {start_date}")
     print(f"  {Colors.CYAN}TARGET_IP{Colors.END} = {target_ip}")
     print(f"  {Colors.CYAN}CTF_TICK_LENGTH{Colors.END} = {tick_length}")
     print(f"  {Colors.CYAN}REFRESH_RATE{Colors.END} = {refresh_rate}")
     print()
-
-
-def validate_date_format(date_str):
-    """Validate the date string to be written in the correct format"""
-    try:
-        # Check basic format first
-        if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(([+-]\d{2}:\d{2})|Z)?$", date_str):
-            return False
-
-        # If no timezone is specified, we'll add +02:00 later
-        test_date = date_str
-        if not ('+' in date_str or '-' in date_str[10:] or date_str.endswith('Z')):
-            test_date = f"{date_str}+02:00"
-
-        # Try to parse the date in ISO format
-        datetime.fromisoformat(test_date.replace('Z', '+00:00'))
-        return True
-    except ValueError:
-        return False
 
 
 def update_compose(target_ip, key):
@@ -283,7 +347,7 @@ def update_compose(target_ip, key):
 
 def compose_down(compose_file):
     """Stop and remove containers defined in the specified docker-compose file"""
-    cmd = ["docker", "compose", "-f", compose_file, "down"]
+    cmd = ["docker", "compose", "-f", compose_file, "down", "--remove-orphans"]
     print_progress(f"Executing: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
     print_success("Containers successfully stopped!")
@@ -321,11 +385,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {Colors.BOLD}Examples:{Colors.END}
-  {Colors.CYAN}./start.py --build{Colors.END}                    # Start in mode C with build
-  {Colors.CYAN}./start.py --mode-a{Colors.END}                   # Start in mode A
-  {Colors.CYAN}./start.py --down{Colors.END}                     # Stop containers
-  {Colors.CYAN}./start.py --clear{Colors.END}                    # Clean and stop
-  {Colors.CYAN}./start.py --mode-c --target-ip 192.168.1.10{Colors.END}  # Start mode C with IP
+  {Colors.CYAN}./start.py --build{Colors.END}                               # Start in mode C with build
+  {Colors.CYAN}./start.py --mode-a{Colors.END}                              # Start in mode A
+  {Colors.CYAN}./start.py --down{Colors.END}                                # Stop containers
+  {Colors.CYAN}./start.py --clear{Colors.END}                               # Clean and stop
+  {Colors.CYAN}./start.py -b --mode-c --target-ip 192.168.1.10{Colors.END}  # Start mode C with IP
         """
     )
 
@@ -339,8 +403,7 @@ def main():
     parser.add_argument("--clear", "-c", dest="clear", action="store_true",
                         help="Clean Suricata output and stop containers")
 
-    parser.add_argument("--date", dest="start_date",
-                        help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz, timezone +02:00 added if not specified)")
+    parser.add_argument("--date", dest="start_date", help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz)")
     parser.add_argument("--target-ip", "-ip", dest="target_ip", help="Specify target machine IP address (for mode C)")
     parser.add_argument("--refresh-rate", "-r", dest="refresh_rate", help="Specify refresh rate (in seconds)")
     parser.add_argument("--tick-length", "-t", dest="tick_length", help="Specify tick length (in seconds)")
@@ -352,7 +415,7 @@ def main():
     use_mode_c = not (args.mode_a or args.mode_b) or args.mode_c
 
     # Select the appropriate docker-compose file based on the mode
-    compose_file = ""
+    compose_file = COMPOSE_FILES["C"]
     if args.mode_a:
         compose_file = COMPOSE_FILES["A"]
         print_info("Starting in mode A (pcap replay)...")
