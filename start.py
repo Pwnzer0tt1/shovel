@@ -375,6 +375,30 @@ def clear_suricata():
     print_success("Suricata output directory cleaned successfully!")
 
 
+def show_action_selection():
+    """Display action selection menu"""
+    print_info("Available actions:")
+    print(f"  {Colors.BOLD}build{Colors.END} - Build and start containers")
+    print(f"  {Colors.BOLD}down{Colors.END} - Stop containers")
+    print(f"  {Colors.BOLD}clear{Colors.END} - Clean Suricata output and stop containers")
+    print()
+
+
+def prompt_for_action():
+    """Prompt user for action selection"""
+    print_separator()
+    print(f"{Colors.BOLD}{Colors.CYAN}Action Selection{Colors.END}")
+    print_separator()
+    
+    show_action_selection()
+    
+    while True:
+        action = prompt_styled("Enter action (build/down/clear)").strip().lower()
+        if action in ['build', 'down', 'clear']:
+            return action
+        print_error("Invalid action. Please choose from: build, down, clear")
+
+
 def main():
     # Clear screen and show banner
     os.system('clear' if os.name == 'posix' else 'cls')
@@ -411,6 +435,20 @@ def main():
 
     args = parser.parse_args()
 
+    # Check if any action argument was provided
+    action_provided = args.build or args.down or args.clear
+    
+    # If no action is provided, enter interactive mode
+    if not action_provided:
+        action = prompt_for_action()
+        # Set the appropriate flag based on user choice
+        if action == 'build':
+            args.build = True
+        elif action == 'down':
+            args.down = True
+        elif action == 'clear':
+            args.clear = True
+
     # Mode C as default if no mode is specified
     use_mode_c = not (args.mode_a or args.mode_b) or args.mode_c
 
@@ -425,36 +463,32 @@ def main():
     elif use_mode_c:
         compose_file = COMPOSE_FILES["C"]
 
-    if not (args.build or args.down or args.clear):
-        print_error("No relevant action specified (down, build, clear).")
-        print_warning(f"Run it with {Colors.BOLD}-h{Colors.END} {Colors.YELLOW}for help.{Colors.END}")
-        sys.exit(1)
-    else:
-        if os.path.exists(ENV_FILE):
-            compose_down(compose_file)
+    # Now we know an action is set (either from args or interactive mode)
+    if os.path.exists(ENV_FILE):
+        compose_down(compose_file)
 
-        if args.down and not args.build:
-            print_success("Operation completed successfully!")
-            sys.exit(0)
+    if args.down and not args.build:
+        print_success("Operation completed successfully!")
+        sys.exit(0)
 
-        if args.build:
-            while True:
-                r = prompt_styled("Do you want to clear Suricata output directory? (y/n)",
-                                  required=False, default="n").strip().lower()
-                if r in ['y', 'yes']:
-                    clear_suricata()
-                    args.clear = False
-                    print()
-                    break
-                elif r in ['n', 'no', '']:
-                    print_warning("Suricata output directory will not be cleared.")
-                    break
-                else:
-                    print_error("Invalid input. Please enter 'y' or 'n'.")
+    if args.build:
+        while True:
+            r = prompt_styled("Do you want to clear Suricata output directory? (y/n)",
+                              required=False, default="n").strip().lower()
+            if r in ['y', 'yes']:
+                clear_suricata()
+                args.clear = False
+                print()
+                break
+            elif r in ['n', 'no', '']:
+                print_warning("Suricata output directory will not be cleared.")
+                break
+            else:
+                print_error("Invalid input. Please enter 'y' or 'n'.")
 
-        if args.clear:
-            clear_suricata()
-            sys.exit(0)
+    if args.clear:
+        clear_suricata()
+        sys.exit(0)
 
     print_separator()
 
