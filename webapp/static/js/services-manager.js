@@ -369,7 +369,12 @@ class ServicesManager {
                         <div class="flex-grow-1 me-3">
                             <h6 class="card-title mb-2 d-flex align-items-center">
                                 <span class="badge me-2" style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%;"></span>
-                                <strong>${name}</strong>
+                                <span class="service-name-badge" style=" 
+                                    border-radius: 8px; 
+                                    padding: 4px 8px; 
+                                    background-color: ${color};
+                                    font-weight: bold;
+                                ">${name}</span>
                             </h6>
                             <div class="small">
                                 ${ipports.map(ip => `
