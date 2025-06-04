@@ -186,7 +186,7 @@ def prompt_for_missing_params(args, use_mode_c):
             print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm {Colors.BLUE}(e.g., {example_date}){Colors.END}")
 
             while True:
-                start_date = prompt_styled("Enter CTF start date (without timezone)")
+                start_date = prompt_styled("Enter CTF start date")
                 if start_date and validate_date_format(start_date):
                     args.start_date = start_date
                     break
@@ -425,23 +425,36 @@ def main():
     elif use_mode_c:
         compose_file = COMPOSE_FILES["C"]
 
-    # Handle special actions
-    if args.down or args.build:
+    if not (args.build or args.down or args.clear):
+        print_error("No relevant action specified (down, build, clear).")
+        print_warning(f"Run it with {Colors.BOLD}-h{Colors.END} {Colors.YELLOW}for help.{Colors.END}")
+        sys.exit(1)
+    else:
         if os.path.exists(ENV_FILE):
             compose_down(compose_file)
+
         if args.down and not args.build:
             print_success("Operation completed successfully!")
             sys.exit(0)
-    elif args.clear:
-        if os.path.exists(ENV_FILE):
-            compose_down(compose_file)
-        clear_suricata()
-        print_success("Clean operation completed successfully!")
-        sys.exit(0)
-    else:
-        print_error("No relevant action specified (down, build, clear).")
-        print(f"Use {Colors.YELLOW}-h{Colors.END} for help.")
-        sys.exit(1)
+
+        if args.build:
+            while True:
+                r = prompt_styled("Do you want to clear Suricata output directory? (y/n)",
+                                  required=False, default="n").strip().lower()
+                if r in ['y', 'yes']:
+                    clear_suricata()
+                    args.clear = False
+                    print()
+                    break
+                elif r in ['n', 'no', '']:
+                    print_warning("Suricata output directory will not be cleared.")
+                    break
+                else:
+                    print_error("Invalid input. Please enter 'y' or 'n'.")
+
+        if args.clear:
+            clear_suricata()
+            sys.exit(0)
 
     print_separator()
 
@@ -452,7 +465,7 @@ def main():
     elif use_mode_c:
         print_progress("Initializing mode C (PCAP-over-IP)...")
 
-        # Prompt for missing parameters instead of exiting
+        # Prompt for missing parameters
         prompt_for_missing_params(args, use_mode_c)
 
         # Validate start date format after prompting
