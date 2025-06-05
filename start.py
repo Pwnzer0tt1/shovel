@@ -13,6 +13,7 @@ COMPOSE_FILES = {
     "B": "docker-compose-b.yml",
     "C": "docker-compose-c.yml"
 }
+OFFSET_PRINT = 77
 
 
 # Terminal colors and formatting
@@ -45,7 +46,7 @@ def print_banner():
     print()
 
 
-def print_separator(char="─", length=60):
+def print_separator(char="─", length=OFFSET_PRINT):
     """Print a separator line"""
     print(Colors.BLUE + char * length + Colors.END)
 
@@ -110,8 +111,8 @@ def show_mode_selection():
 
 def prompt_for_mode():
     """Prompt user for mode selection"""
-    print_separator()
-    print(f"{Colors.BOLD}{Colors.CYAN}Mode Selection{Colors.END}".center(72))
+    print_separator(char="═")
+    print(f"{Colors.BOLD}{Colors.CYAN}Mode Selection{Colors.END}".center(OFFSET_PRINT + 12))
     print_separator()
 
     print_info("Choose a mode to start Shovel:")
@@ -123,6 +124,7 @@ def prompt_for_mode():
     while True:
         mode = prompt_styled("Enter mode (A/B/C)", default="C").strip().upper()
         if mode in ['A', 'B', 'C']:
+            print_separator(char="═")
             print()
             return mode
         print_error("Invalid mode. Please choose from: A, B, C")
@@ -178,8 +180,8 @@ def prompt_for_missing_params(args):
         example_date += "30"
     example_date += get_tz()
 
-    print_separator()
-    print(f"{Colors.BOLD}{Colors.CYAN}Configuration Setup for Mode C{Colors.END}")
+    print_separator(char="═")
+    print(f"{Colors.BOLD}{Colors.CYAN}Configuration Setup for Mode C{Colors.END}".center(OFFSET_PRINT + 12))
     print_separator()
 
     # Target IP with validation
@@ -202,7 +204,6 @@ def prompt_for_missing_params(args):
                 print_error("Target IP cannot be empty. Please try again.")
 
     # Start date with validation
-    start_date = ""
     if not args.start_date:
         print()
         print_info("CTF Start Date Configuration")
@@ -286,10 +287,6 @@ def prompt_for_missing_params(args):
                 break
             print_error(f"Unsupported algorithm. Choose from: {', '.join(supported_algorithms)}")
 
-    print_separator()
-    print_success("Configuration completed successfully!")
-    print()
-
 
 def write_env(start_date, target_ip, tick_length, refresh_rate):
     if not os.path.exists(ENV_FILE):
@@ -367,10 +364,10 @@ def compose_down(compose_file):
     if not os.path.exists(compose_file):
         print_error(f"Docker compose file not found: {compose_file}")
         return False
-        
+
     cmd = ["docker", "compose", "-f", compose_file, "down", "--remove-orphans"]
     print_progress(f"Executing: {' '.join(cmd)}")
-    
+
     try:
         subprocess.run(cmd, check=True)
         print_success("Containers successfully stopped!")
@@ -381,19 +378,20 @@ def compose_down(compose_file):
         print_info("Make sure Docker is running and accessible.")
         return False
 
+
 def compose_up(compose_file, build=True):
     """Start containers defined in the specified docker-compose file"""
     # Check if compose file exists
     if not os.path.exists(compose_file):
         print_error(f"Docker compose file not found: {compose_file}")
         sys.exit(1)
-        
+
     cmd = ["docker", "compose", "-f", compose_file, "up", "-d"]
     if build:
         cmd.append("--build")
 
     print_progress(f"Executing: {' '.join(cmd)}")
-    
+
     try:
         subprocess.run(cmd, check=True)
         print_success("Containers successfully started!")
@@ -413,22 +411,21 @@ def clear_suricata():
         os.makedirs("./suricata/output", exist_ok=True)
         print_info("Created Suricata output directory.")
         return
-    
+
     # Check if directory is empty
     if not os.listdir("./suricata/output"):
         print_info("Suricata output directory is already empty.")
         return
-        
+
     cmd = "sudo rm -rf ./suricata/output/*"
     print_progress("Cleaning Suricata output directory...")
-    
+
     try:
         subprocess.run(cmd, check=True, shell=True)
         print_success("Suricata output directory cleaned successfully!")
     except subprocess.CalledProcessError as e:
         print_error(f"Failed to clean Suricata output directory: {e}")
         print_warning("You may need to check permissions or run with appropriate privileges.")
-
 
 
 def get_compose_file_for_mode(mode):
@@ -438,8 +435,8 @@ def get_compose_file_for_mode(mode):
 
 def handle_start_command(args):
     """Handle the start command"""
-    print_progress("Starting Shovel...")
-    
+    print_progress("Starting Shovel...\n")
+
     # Determine mode
     if args.mode_a:
         mode = "A"
@@ -480,7 +477,18 @@ def handle_start_command(args):
             else:
                 print_error("Invalid input. Please enter 'y' or 'n'.")
 
-    print_separator()
+        while True:
+            r = prompt_styled("Do you want to clear config files? (y/n)", required=False, default="n").strip().lower()
+            if r in ['y', 'yes']:
+                clear_config_files()
+                print()
+                break
+            elif r in ['n', 'no', '']:
+                print_warning("Config files will not be cleared.")
+                print()
+                break
+            else:
+                print_error("Invalid input. Please enter 'y' or 'n'.")
 
     # Mode-specific initialization
     if mode == "A":
@@ -489,17 +497,17 @@ def handle_start_command(args):
         if not os.path.exists(compose_file):
             print_error(f"Docker compose file not found: {compose_file}")
             sys.exit(1)
-            
+
     elif mode == "B":
         print_progress("Initializing mode B (capture interface)...")
         # Check if required compose file exists
         if not os.path.exists(compose_file):
             print_error(f"Docker compose file not found: {compose_file}")
             sys.exit(1)
-            
+
     elif mode == "C":
-        print_progress("Initializing mode C (PCAP-over-IP)...")
-        
+        print_progress("Initializing mode C (PCAP-over-IP)...\n")
+
         # Check if required compose file exists
         if not os.path.exists(compose_file):
             print_error(f"Docker compose file not found: {compose_file}")
@@ -533,21 +541,24 @@ def handle_start_command(args):
             with open(json_config, "w") as f:
                 f.write("{}")
 
-    print_separator()
+    print_separator(char="═")
+    print_success("Configuration completed successfully!")
+    print_separator(char="═")
+    print()
 
     # Start the containers using the selected docker-compose file
     compose_up(compose_file, not args.no_build)
 
-    print_separator("═", 60)
+    print_separator(char="═")
     print_success(f"Shovel successfully started in mode {mode}!")
     print(f"  {Colors.BOLD}Web interface:{Colors.END} {Colors.CYAN}http://127.0.0.1:8000{Colors.END}")
-    print_separator("═", 60)
+    print_separator(char="═")
 
 
 def handle_stop_command(args):
     """Handle the stop command"""
     print_progress("Stopping Shovel...")
-    
+
     # Check if .env exists to determine which compose file to use
     if os.path.exists(ENV_FILE):
         # Try to determine which compose file was used
@@ -556,13 +567,13 @@ def handle_stop_command(args):
     else:
         print_warning("No configuration file found. Attempting to stop default containers...")
         compose_file = COMPOSE_FILES["C"]
-    
+
     # Check if compose file exists
     if not os.path.exists(compose_file):
         print_error(f"Docker compose file not found: {compose_file}")
         print_info("Cannot determine which containers to stop.")
         sys.exit(1)
-    
+
     compose_down(compose_file)
     print_success("Operation completed successfully!")
 
@@ -570,11 +581,11 @@ def handle_stop_command(args):
 def handle_clear_command(args):
     """Handle the clear command with granular options"""
     print_progress("Clearing data...")
-    
+
     # If no specific options, default to clearing output and stopping containers
     if not (args.all or args.config or args.output):
-        print_info("No specific clear option provided. Clearing output and stopping containers...")
-        
+        print_info("No specific clear option provided.\n")
+
         # Stop containers first - check if compose file exists
         compose_file = COMPOSE_FILES["C"]
         if os.path.exists(compose_file):
@@ -582,20 +593,44 @@ def handle_clear_command(args):
         else:
             print_warning(f"Docker compose file not found: {compose_file}")
             print_info("Skipping container stop operation.")
-        
-        # Clear Suricata output - check if directory exists
-        if os.path.exists("./suricata/output"):
-            clear_suricata()
-        else:
-            print_warning("Suricata output directory not found. Skipping clear operation.")
-            
-        print_success("Clear operation completed successfully!")
+
+        while True:
+            r = prompt_styled("Do you want to clear Suricata output directory? (y/n)",
+                              required=False, default="n").strip().lower()
+            if r in ['y', 'yes']:
+                # Check if suricata output directory exists
+                if os.path.exists("./suricata/output"):
+                    clear_suricata()
+                else:
+                    print_warning("Suricata output directory not found. Skipping clear operation.")
+                print()
+                break
+            elif r in ['n', 'no', '']:
+                print_warning("Suricata output directory will not be cleared.")
+                print()
+                break
+            else:
+                print_error("Invalid input. Please enter 'y' or 'n'.")
+
+        while True:
+            r = prompt_styled("Do you want to clear config files? (y/n)", required=False, default="n").strip().lower()
+            if r in ['y', 'yes']:
+                clear_config_files()
+                print()
+                break
+            elif r in ['n', 'no', '']:
+                print_warning("Config files will not be cleared.")
+                print()
+                break
+            else:
+                print_error("Invalid input. Please enter 'y' or 'n'.")
+
         return
 
     # Handle --all option
     if args.all:
         print_info("Clearing everything...")
-        
+
         # Stop containers - check if compose file exists
         compose_file = COMPOSE_FILES["C"]
         if os.path.exists(compose_file):
@@ -603,25 +638,25 @@ def handle_clear_command(args):
         else:
             print_warning(f"Docker compose file not found: {compose_file}")
             print_info("Skipping container stop operation.")
-            
+
         # Clear Suricata output - check if directory exists
         if os.path.exists("./suricata/output"):
             clear_suricata()
         else:
             print_warning("Suricata output directory not found. Skipping clear operation.")
-            
+
         # Clear config files
         clear_config_files()
         print_success("All data cleared successfully!")
         return
-    
+
     # Handle granular options
     cleared_items = []
-    
+
     if args.config:
         clear_config_files()
         cleared_items.append("config files")
-    
+
     if args.output:
         # Stop containers first if clearing output - check if compose file exists
         compose_file = COMPOSE_FILES["C"]
@@ -630,14 +665,14 @@ def handle_clear_command(args):
         else:
             print_warning(f"Docker compose file not found: {compose_file}")
             print_info("Skipping container stop operation.")
-            
+
         # Clear Suricata output - check if directory exists
         if os.path.exists("./suricata/output"):
             clear_suricata()
             cleared_items.append("Suricata output")
         else:
             print_warning("Suricata output directory not found. Skipping clear operation.")
-    
+
     if cleared_items:
         print_success(f"Cleared: {', '.join(cleared_items)}")
     else:
@@ -648,12 +683,12 @@ def clear_config_files():
     """Clear configuration files"""
     files_to_clear = [ENV_FILE, "services_config.json"]
     cleared_files = []
-    
+
     for file_path in files_to_clear:
         if os.path.exists(file_path):
             os.remove(file_path)
             cleared_files.append(file_path)
-    
+
     if cleared_files:
         print_success(f"Cleared config files: {', '.join(cleared_files)}")
     else:
@@ -663,20 +698,20 @@ def clear_config_files():
 def handle_status_command(args):
     """Handle the status command - show container status"""
     print_progress("Checking Shovel status...")
-    
+
     # Check if .env exists to provide context
     if not os.path.exists(ENV_FILE):
         print_warning("No configuration file found. Showing default container status...")
-    
+
     # Default to mode C compose file
     compose_file = COMPOSE_FILES["C"]
-    
+
     # Check if compose file exists
     if not os.path.exists(compose_file):
         print_error(f"Docker compose file not found: {compose_file}")
         print_info("Cannot check container status without compose file.")
         sys.exit(1)
-    
+
     # Always show container status
     print_info("Container Status:")
     cmd = ["docker", "compose", "-f", compose_file, "ps"]
@@ -691,27 +726,27 @@ def handle_status_command(args):
 def handle_logs_command(args):
     """Handle the logs command - follow container logs"""
     print_progress("Following container logs...")
-    
+
     # Check if .env exists to provide context
     if not os.path.exists(ENV_FILE):
         print_warning("No configuration file found. Using default compose file...")
-    
+
     # Default to mode C compose file
     compose_file = COMPOSE_FILES["C"]
-    
+
     # Check if compose file exists
     if not os.path.exists(compose_file):
         print_error(f"Docker compose file not found: {compose_file}")
         print_info("Cannot follow logs without compose file.")
         sys.exit(1)
-    
+
     # Build logs command - always start with -f for compatibility with --tail
     cmd = ["docker", "compose", "-f", compose_file, "logs", "-f"]
-    
+
     # Add arguments directly from sys.argv instead of parsed args
     if len(sys.argv) > 2:  # If there are arguments after "logs"
         cmd.extend(sys.argv[2:])  # Take everything after "logs"
-    
+
     print_progress(f"Executing: {' '.join(cmd)}")
     try:
         result = subprocess.run(cmd)
@@ -725,20 +760,20 @@ def handle_logs_command(args):
 def handle_exec_command(args):
     """Handle the exec command - execute commands in containers"""
     print_progress("Executing command in container...")
-    
+
     # Check if .env exists to provide context
     if not os.path.exists(ENV_FILE):
         print_warning("No configuration file found. Using default compose file...")
-    
+
     # Default to mode C compose file
     compose_file = COMPOSE_FILES["C"]
-    
+
     # Check if compose file exists
     if not os.path.exists(compose_file):
         print_error(f"Docker compose file not found: {compose_file}")
         print_info("Cannot execute commands without compose file.")
         sys.exit(1)
-    
+
     # Build exec command
     cmd = ["docker", "compose", "-f", compose_file, "exec"]
     if args.compose_args:
@@ -747,7 +782,7 @@ def handle_exec_command(args):
         print_error("Usage: ./start.py exec <service> <command>")
         print_info("Example: ./start.py exec shovel-web bash")
         sys.exit(1)
-    
+
     print_progress(f"Executing: {' '.join(cmd)}")
     try:
         result = subprocess.run(cmd)
@@ -799,13 +834,16 @@ def create_parser():
     mode_group.add_argument("--mode-a", action="store_true", help="Start in mode A (pcap replay)")
     mode_group.add_argument("--mode-b", action="store_true", help="Start in mode B (capture interface)")
     mode_group.add_argument("--mode-c", action="store_true", help="Start in mode C (PCAP-over-IP)")
-    
+
     parser_start.add_argument("--no-build", action="store_true", help="Skip building images")
-    parser_start.add_argument("--date", dest="start_date", help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz)")
-    parser_start.add_argument("--target-ip", "-ip", dest="target_ip", help="Specify target machine IP address (for mode C)")
+    parser_start.add_argument("--date", dest="start_date",
+                              help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz)")
+    parser_start.add_argument("--target-ip", "-ip", dest="target_ip",
+                              help="Specify target machine IP address (for mode C)")
     parser_start.add_argument("--refresh-rate", "-r", dest="refresh_rate", help="Specify refresh rate (in seconds)")
     parser_start.add_argument("--tick-length", "-t", dest="tick_length", help="Specify tick length (in seconds)")
-    parser_start.add_argument("--key", "-k", dest="key", help="Specify algorithm for SSH key exchange (default: ed25519)")
+    parser_start.add_argument("--key", "-k", dest="key",
+                              help="Specify algorithm for SSH key exchange (default: ed25519)")
 
     # Stop command
     subparsers.add_parser("stop", help="Stop Shovel containers")
@@ -839,6 +877,7 @@ def create_parser():
 
     return parser
 
+
 def show_action_selection():
     """Display action selection menu"""
     print_info("Available actions:")
@@ -853,8 +892,8 @@ def show_action_selection():
 
 def prompt_for_action():
     """Prompt user for action selection"""
-    print_separator()
-    print(f"{Colors.BOLD}{Colors.CYAN}Action Selection{Colors.END}".center(72))
+    print_separator(char="═")
+    print(f"{Colors.BOLD}{Colors.CYAN}Action Selection{Colors.END}".center(OFFSET_PRINT + 12))
     print_separator()
 
     show_action_selection()
@@ -862,6 +901,7 @@ def prompt_for_action():
     while True:
         action = prompt_styled("Enter action (start/stop/clear/status/logs/help)", default="start").strip().lower()
         if action in ['start', 'stop', 'clear', 'status', 'logs', 'help']:
+            print_separator(char="═")
             print()
             return action
         print_error("Invalid action. Please choose from: start, stop, clear, status, logs, help")
@@ -877,12 +917,13 @@ def main():
         # Call logs handler directly with raw arguments
         class MockArgs:
             pass
+
         args = MockArgs()
         handle_logs_command(args)
         return
 
     parser = create_parser()
-    
+
     # If no arguments provided, enter interactive mode
     if len(sys.argv) == 1:
         action = prompt_for_action()
@@ -905,6 +946,7 @@ def main():
         handle_exec_command(args)
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()
