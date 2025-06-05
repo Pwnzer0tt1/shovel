@@ -108,6 +108,15 @@ def show_mode_selection():
     print()
 
 
+def show_action_selection():
+    """Display action selection menu"""
+    print_info("Available actions:")
+    print(f"  {Colors.BOLD}start{Colors.END} - Build and start containers")
+    print(f"  {Colors.BOLD}stop{Colors.END} - Stop running containers, if any")
+    print(f"  {Colors.BOLD}clear{Colors.END} - Clear Suricata's output, and stop containers")
+    print()
+
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 def get_tz():
@@ -147,7 +156,7 @@ def validate_timezone(date_str):
         return False
 
 
-def prompt_for_missing_params(args, use_mode_c):
+def prompt_for_missing_params(args):
     """Prompt user for missing required parameters with styled interface"""
 
     now = datetime.now()
@@ -158,39 +167,53 @@ def prompt_for_missing_params(args, use_mode_c):
         example_date += "30"
     example_date += get_tz()
 
-    if use_mode_c:
-        print_separator()
-        print(f"{Colors.BOLD}{Colors.CYAN}Configuration Setup for Mode C{Colors.END}")
-        print_separator()
+    print_separator()
+    print(f"{Colors.BOLD}{Colors.CYAN}Configuration Setup for Mode C{Colors.END}")
+    print_separator()
 
-        # Target IP
-        if not args.target_ip:
-            print_info("Target IP Configuration")
-            while True:
-                target_ip = prompt_styled("Enter target IP address")
-                if target_ip:
-                    if re.match(r'^(\d{1,3}\.){3}\d{1,3}$', target_ip):
-                        octets = target_ip.split('.')
-                        valid_octets = all(0 <= int(octet) <= 255 for octet in octets)
-                        if valid_octets:
-                            args.target_ip = target_ip
-                            break
-                        else:
-                            print_error("IP address octets must be between 0-255. Please try again.")
+    # Target IP
+    if not args.target_ip:
+        print_info("Target IP Configuration")
+        while True:
+            target_ip = prompt_styled("Enter target IP address")
+            if target_ip:
+                if re.match(r'^(\d{1,3}\.){3}\d{1,3}$', target_ip):
+                    octets = target_ip.split('.')
+                    valid_octets = all(0 <= int(octet) <= 255 for octet in octets)
+                    if valid_octets:
+                        args.target_ip = target_ip
+                        break
                     else:
-                        print_error("Invalid IP address format. Please use format: xxx.xxx.xxx.xxx")
+                        print_error("IP address octets must be between 0-255. Please try again.")
                 else:
-                    print_error("Target IP cannot be empty. Please try again.")
+                    print_error("Invalid IP address format. Please use format: xxx.xxx.xxx.xxx")
+            else:
+                print_error("Target IP cannot be empty. Please try again.")
 
-        # No date added
-        start_date = ""
-        if not args.start_date:
-            print()
-            print_info("CTF Start Date Configuration")
-            print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm+ZZ:zz {Colors.BLUE}(e.g., {example_date}){Colors.END}")
+    # No date added
+    start_date = ""
+    if not args.start_date:
+        print()
+        print_info("CTF Start Date Configuration")
+        print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm+ZZ:zz {Colors.BLUE}(e.g., {example_date}){Colors.END}")
+
+        while True:
+            start_date = prompt_styled("Enter CTF start date")
+            if start_date and validate_date_format(start_date):
+                args.start_date = start_date
+                break
+            elif start_date:
+                print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm+ZZ:zz")
+            else:
+                print_error("Start date cannot be empty. Please try again.")
+    else:
+        # Check if added date is correct
+        if not validate_date_format(args.start_date):
+            print_error(f"Invalid date format: {args.start_date}")
+            print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm {Colors.BLUE}(e.g., {example_date}){Colors.END}")
 
             while True:
-                start_date = prompt_styled("Enter CTF start date")
+                start_date = prompt_styled("Enter CTF start date: ")
                 if start_date and validate_date_format(start_date):
                     args.start_date = start_date
                     break
@@ -198,76 +221,61 @@ def prompt_for_missing_params(args, use_mode_c):
                     print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm+ZZ:zz")
                 else:
                     print_error("Start date cannot be empty. Please try again.")
-        else:
-            # Check if added date is correct
-            if not validate_date_format(args.start_date):
-                print_error(f"Invalid date format: {args.start_date}")
-                print_info(f"Format: {Colors.YELLOW}YYYY-MM-DDThh:mm {Colors.BLUE}(e.g., {example_date}){Colors.END}")
 
-                while True:
-                    start_date = prompt_styled("Enter CTF start date: ")
-                    if start_date and validate_date_format(start_date):
-                        args.start_date = start_date
-                        break
-                    elif start_date:
-                        print_error("Invalid date format. Please use: YYYY-MM-DDThh:mm+ZZ:zz")
-                    else:
-                        print_error("Start date cannot be empty. Please try again.")
-
-        # Request for timezone, if not specified
-        if not validate_timezone(start_date):
-            print()
-            print_warning("Timezone not inserted or wrong.")
-            print()
-            print_info("Timezone Configuration")
-            current_tz = get_tz()
-            print_info(f"Format: {Colors.YELLOW}+/-HH:MM {Colors.END}")
-
-            while True:
-                tz = prompt_styled("Enter timezone", current=current_tz)
-                if validate_timezone(args.start_date + tz):
-                    args.start_date = f"{args.start_date}{tz}"
-                    break
-                print_error(f"Invalid timezone format. Please use +/-HH:MM")
-
-        # Tick length
-        if not args.tick_length:
-            print()
-            print_info("Tick Length Configuration")
-            while True:
-                tick_length = prompt_styled("Enter tick length (in seconds)")
-                if tick_length and tick_length.isdigit():
-                    args.tick_length = tick_length
-                    break
-                print_error("Tick length must be a positive number. Please try again.")
-
-        # Refresh rate
-        if not args.refresh_rate:
-            print()
-            print_info("Refresh Rate Configuration")
-            while True:
-                refresh_rate = prompt_styled("Enter refresh rate (in seconds)")
-                if refresh_rate and refresh_rate.isdigit():
-                    args.refresh_rate = refresh_rate
-                    break
-                print_error("Refresh rate must be a positive number. Please try again.")
-
-        # SSH key algorithm
-        if not args.key:
-            print()
-            print_info("SSH Key Algorithm Configuration")
-            supported_algorithms = ["rsa", "ed25519", "ecdsa", "dsa"]
-            print_info(f"Available algorithms: {Colors.YELLOW}{', '.join(supported_algorithms)}{Colors.END}")
-            while True:
-                key = prompt_styled("Enter SSH key algorithm", default="ed25519")
-                if key.lower() in [alg.lower() for alg in supported_algorithms]:
-                    args.key = key.lower()
-                    break
-                print_error(f"Unsupported algorithm. Choose from: {', '.join(supported_algorithms)}")
-
-        print_separator()
-        print_success("Configuration completed successfully!")
+    # Request for timezone, if not specified
+    if not validate_timezone(start_date):
         print()
+        print_warning("Timezone not inserted or wrong.")
+        print()
+        print_info("Timezone Configuration")
+        current_tz = get_tz()
+        print_info(f"Format: {Colors.YELLOW}+/-HH:MM {Colors.END}")
+
+        while True:
+            tz = prompt_styled("Enter timezone", current=current_tz)
+            if validate_timezone(args.start_date + tz):
+                args.start_date = f"{args.start_date}{tz}"
+                break
+            print_error(f"Invalid timezone format. Please use +/-HH:MM")
+
+    # Tick length
+    if not args.tick_length:
+        print()
+        print_info("Tick Length Configuration")
+        while True:
+            tick_length = prompt_styled("Enter tick length (in seconds)")
+            if tick_length and tick_length.isdigit():
+                args.tick_length = tick_length
+                break
+            print_error("Tick length must be a positive number. Please try again.")
+
+    # Refresh rate
+    if not args.refresh_rate:
+        print()
+        print_info("Refresh Rate Configuration")
+        while True:
+            refresh_rate = prompt_styled("Enter refresh rate (in seconds)")
+            if refresh_rate and refresh_rate.isdigit():
+                args.refresh_rate = refresh_rate
+                break
+            print_error("Refresh rate must be a positive number. Please try again.")
+
+    # SSH key algorithm
+    if not args.key:
+        print()
+        print_info("SSH Key Algorithm Configuration")
+        supported_algorithms = ["rsa", "ed25519", "ecdsa", "dsa"]
+        print_info(f"Available algorithms: {Colors.YELLOW}{', '.join(supported_algorithms)}{Colors.END}")
+        while True:
+            key = prompt_styled("Enter SSH key algorithm", default="ed25519")
+            if key.lower() in [alg.lower() for alg in supported_algorithms]:
+                args.key = key.lower()
+                break
+            print_error(f"Unsupported algorithm. Choose from: {', '.join(supported_algorithms)}")
+
+    print_separator()
+    print_success("Configuration completed successfully!")
+    print()
 
 
 def write_env(start_date, target_ip, tick_length, refresh_rate):
@@ -370,28 +378,40 @@ def clear_suricata():
     print_success("Suricata output directory cleaned successfully!")
 
 
-def show_action_selection():
-    """Display action selection menu"""
-    print_info("Available actions:")
-    print(f"  {Colors.BOLD}build{Colors.END} - Build and start containers")
-    print(f"  {Colors.BOLD}down{Colors.END} - Stop containers")
-    print(f"  {Colors.BOLD}clear{Colors.END} - Clean Suricata output and stop containers")
-    print()
-
-
 def prompt_for_action():
     """Prompt user for action selection"""
     print_separator()
-    print(f"{Colors.BOLD}{Colors.CYAN}Action Selection{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.CYAN}Action Selection{Colors.END}".center(72))
     print_separator()
 
     show_action_selection()
 
     while True:
-        action = prompt_styled("Enter action (build/down/clear)").strip().lower()
-        if action in ['build', 'down', 'clear']:
+        action = prompt_styled("Enter action (start/stop/clear)").strip().lower()
+        if action in ['start', 'stop', 'clear']:
+            print()
             return action
-        print_error("Invalid action. Please choose from: build, down, clear")
+        print_error("Invalid action. Please choose from: start, stop, clear")
+
+
+def prompt_for_mode():
+    """Prompt user for mode selection"""
+    print_separator()
+    print(f"{Colors.BOLD}{Colors.CYAN}Mode Selection{Colors.END}".center(72))
+    print_separator()
+
+    print_info("Choose a mode to start Shovel:")
+    print(f"  {Colors.CYAN}A{Colors.END} - PCAP replay mode")
+    print(f"  {Colors.CYAN}B{Colors.END} - Capture interface mode")
+    print(f"  {Colors.CYAN}C{Colors.END} - PCAP-over-IP mode")
+    print()
+
+    while True:
+        mode = prompt_styled("Enter mode (A/B/C)", default="C").strip().upper()
+        if mode in ['A', 'B', 'C']:
+            print()
+            return mode
+        print_error("Invalid mode. Please choose from: A, B, C")
 
 
 def main():
@@ -404,23 +424,21 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 {Colors.BOLD}Examples:{Colors.END}
-  {Colors.CYAN}./start.py --build{Colors.END}                               # Start in mode C with build
-  {Colors.CYAN}./start.py --mode-a{Colors.END}                              # Start in mode A
-  {Colors.CYAN}./start.py --down{Colors.END}                                # Stop containers
-  {Colors.CYAN}./start.py --clear{Colors.END}                               # Clean and stop
-  {Colors.CYAN}./start.py -b --mode-c --target-ip 192.168.1.10{Colors.END}  # Start mode C with IP
+  {Colors.CYAN}./start.py --start --mode-a{Colors.END}                        # Start Shovel in mode A, with build
+  {Colors.CYAN}./start.py --stop{Colors.END}                                  # Stop running containers
+  {Colors.CYAN}./start.py --clear{Colors.END}                                 # Stop running containers and clean
+  {Colors.CYAN}./start.py -b --mode-c --target-ip 192.168.1.10{Colors.END}    # Start Shovel in mode C, specifying Target IP
         """
     )
 
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument("--mode-a", action="store_true", help="Start in mode A (pcap replay)")
     mode_group.add_argument("--mode-b", action="store_true", help="Start in mode B (capture interface)")
-    mode_group.add_argument("--mode-c", action="store_true", help="Start in mode C (PCAP-over-IP, default)")
+    mode_group.add_argument("--mode-c", action="store_true", help="Start in mode C (PCAP-over-IP)")
 
-    parser.add_argument("--down", dest="down", action="store_true", help="Stop containers listed in docker-compose")
-    parser.add_argument("--build", "-b", dest="build", action="store_true", help="Rebuild images before starting them")
-    parser.add_argument("--clear", "-c", dest="clear", action="store_true",
-                        help="Clean Suricata output and stop containers")
+    parser.add_argument("--start", dest="start", action="store_true", help="Start containers (rebuilding images)")
+    parser.add_argument("--stop", dest="stop", action="store_true", help="Stop containers listed in docker-compose")
+    parser.add_argument("--clear", dest="clear", action="store_true", help="Clean Suricata output and stop containers")
 
     parser.add_argument("--date", dest="start_date", help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz)")
     parser.add_argument("--target-ip", "-ip", dest="target_ip", help="Specify target machine IP address (for mode C)")
@@ -431,42 +449,58 @@ def main():
     args = parser.parse_args()
 
     # Check if any action argument was provided
-    action_provided = args.build or args.down or args.clear
+    action_provided = args.start or args.stop or args.clear
 
     # If no action is provided, enter interactive mode
     if not action_provided:
         action = prompt_for_action()
         # Set the appropriate flag based on user choice
-        if action == 'build':
-            args.build = True
-        elif action == 'down':
-            args.down = True
+        if action == 'start':
+            args.start = True
+        elif action == 'stop':
+            args.stop = True
         elif action == 'clear':
             args.clear = True
 
-    # Mode C as default if no mode is specified
-    use_mode_c = not (args.mode_a or args.mode_b) or args.mode_c
+    # Check if any mode is specified
+    selected_mode = args.mode_a or args.mode_b or args.mode_c
 
-    # Select the appropriate docker-compose file based on the mode
+    # If no mode is specified and we're starting, prompt for mode selection
     compose_file = COMPOSE_FILES["C"]
-    if args.mode_a:
-        compose_file = COMPOSE_FILES["A"]
-        print_info("Starting in mode A (pcap replay)...")
-    elif args.mode_b:
-        compose_file = COMPOSE_FILES["B"]
-        print_info("Starting in mode B (capture interface)...")
-    elif use_mode_c:
-        compose_file = COMPOSE_FILES["C"]
+    if args.start:
+        if selected_mode:
+            if args.mode_a:
+                compose_file = COMPOSE_FILES["A"]
+                print_info("Starting in mode A (pcap replay)...")
+            elif args.mode_b:
+                compose_file = COMPOSE_FILES["B"]
+                print_info("Starting in mode B (capture interface)...")
+            elif args.mode_c:
+                compose_file = COMPOSE_FILES["C"]
+                print_info("Starting in mode C (PCAP-over-IP)...")
+        else:
+            mode = prompt_for_mode()
+            if mode == 'A':
+                args.mode_a = True
+                compose_file = COMPOSE_FILES["A"]
+                print_info("Starting in mode A (pcap replay)...")
+            elif mode == 'B':
+                args.mode_b = True
+                compose_file = COMPOSE_FILES["B"]
+                print_info("Starting in mode B (capture interface)...")
+            elif mode == 'C':
+                args.mode_c = True
+                compose_file = COMPOSE_FILES["C"]
+                print_info("Starting in mode C (PCAP-over-IP)...")
 
-    # Now we know an action is set (either from args or interactive mode)
     if os.path.exists(ENV_FILE):
         compose_down(compose_file)
 
-    if args.down and not args.build:
+    if args.stop and not args.start:
         print_success("Operation completed successfully!")
         sys.exit(0)
 
-    if args.build:
+    if args.start:
         while True:
             r = prompt_styled("Do you want to clear Suricata output directory? (y/n)",
                               required=False, default="n").strip().lower()
@@ -477,6 +511,7 @@ def main():
                 break
             elif r in ['n', 'no', '']:
                 print_warning("Suricata output directory will not be cleared.")
+                print()
                 break
             else:
                 print_error("Invalid input. Please enter 'y' or 'n'.")
@@ -491,11 +526,11 @@ def main():
         print_progress("Initializing mode A (pcap replay)...")
     elif args.mode_b:
         print_progress("Initializing mode B (capture interface)...")
-    elif use_mode_c:
+    elif args.mode_c:
         print_progress("Initializing mode C (PCAP-over-IP)...")
 
         # Prompt for missing parameters
-        prompt_for_missing_params(args, use_mode_c)
+        prompt_for_missing_params(args)
 
         # Validate start date format after prompting
         if args.start_date and not validate_date_format(args.start_date):
@@ -525,7 +560,7 @@ def main():
     print_separator()
 
     # Start the containers using the selected docker-compose file
-    compose_up(compose_file, args.build)
+    compose_up(compose_file, args.start)
 
     print_separator("═", 60)
     print_success(f"Shovel successfully started in mode {'A' if args.mode_a else 'B' if args.mode_b else 'C'}!")
