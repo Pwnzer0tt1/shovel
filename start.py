@@ -457,8 +457,13 @@ def handle_start_command(args):
     else:
         print_info("No existing configuration found. Starting fresh...")
 
-    # Handle clear option
-    if not args.no_build:
+    # Handle clear option - skip if --no-clean is specified
+    if args.no_clean:
+        print_info("Skipping environment cleaning due to --no-clean flag...")
+        print_warning("Suricata output directory will not be cleared.")
+        print_warning("Config files will not be cleared.")
+        print()
+    elif not args.no_build:
         while True:
             r = prompt_styled("Do you want to clear Suricata output directory? (y/n)",
                               required=False, default="n").strip().lower()
@@ -836,6 +841,7 @@ def create_parser():
     mode_group.add_argument("--mode-c", action="store_true", help="Start in mode C (PCAP-over-IP)")
 
     parser_start.add_argument("--no-build", action="store_true", help="Skip building images")
+    parser_start.add_argument("--no-clean", action="store_true", help="Skip cleaning environment")
     parser_start.add_argument("--date", dest="start_date",
                               help="Specify CTF start date (format: YYYY-MM-DDThh:mm+ZZ:zz)")
     parser_start.add_argument("--target-ip", "-ip", dest="target_ip",
