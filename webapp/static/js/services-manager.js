@@ -79,16 +79,23 @@ class ServicesManager {
         const colorInput = document.getElementById('serviceColor')
 
         const name = nameInput.value.trim()
-        const ports = portsInput.value.trim().split('\n').filter(p => p.trim())
+        const port = portsInput.value.trim()
         const color = colorInput.value
 
-        if (!name || ports.length === 0) {
+        const portRegex = /^\d+$/;
+
+        if (!name || !portRegex.test(port)) {
+            this.showToast('Please enter a valid port (only one number, e.g. 8000)', 'error')
+            return
+        }
+
+        if (!name || port.length === 0) {
             this.showToast('Please fill in all fields', 'error')
             return
         }
 
         const defaultIp = document.getElementById('serviceIP').value
-        const ipports = ports.map(port => `${defaultIp}:${port}`)
+        const ipports = [`${defaultIp}:${port}`]
 
         const payload = {
             name: name,
@@ -218,24 +225,17 @@ class ServicesManager {
             const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
             const color = serviceData.color || '#007bff'
 
+            const ipport = ipports[0]
+
             const optgroup = document.createElement('optgroup')
             optgroup.label = name
             optgroup.dataset.ipports = ipports.join(' ')
             optgroup.dataset.color = color
 
-            if (ipports.length > 1) {
-                const allOption = document.createElement('option')
-                allOption.value = ipports.join(',')
-                allOption.textContent = `All (${name})`
-                optgroup.appendChild(allOption)
-            }
-
-            ipports.forEach(ipport => {
-                const option = document.createElement('option')
-                option.value = ipport
-                option.textContent = `${ipport} (${name})`
-                optgroup.appendChild(option)
-            })
+            const option = document.createElement('option')
+            option.value = ipport
+            option.textContent = `${ipport} (${name})`
+            optgroup.appendChild(option)
 
             select.appendChild(optgroup)
 
@@ -248,27 +248,14 @@ class ServicesManager {
             `
             dropdownMenu.appendChild(groupHeader)
 
-            if (ipports.length > 1) {
-                const allLi = document.createElement('li')
-                allLi.innerHTML = `
-                    <a class="dropdown-item ps-4" href="#" data-value="${ipports.join(',')}" style="border-left: 3px solid ${color};">
-                        <span class="me-2" style="width: 8px; height: 8px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
-                        🔵 All (${name})
-                    </a>
-                `
-                dropdownMenu.appendChild(allLi)
-            }
-
-            ipports.forEach(ipport => {
-                const li = document.createElement('li')
-                li.innerHTML = `
-                    <a class="dropdown-item ps-4" href="#" data-value="${ipport}" style="border-left: 3px solid ${color};">
-                        <span class="me-2" style="width: 8px; height: 8px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
-                        • ${ipport} <span class="text-secondary">(${name})</span>
-                    </a>
-                `
-                dropdownMenu.appendChild(li)
-            })
+            const li = document.createElement('li')
+            li.innerHTML = `
+                <a class="dropdown-item ps-4" href="#" data-value="${ipport}" style="border-left: 3px solid ${color};">
+                    <span class="me-2" style="width: 8px; height: 8px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
+                    • ${ipport} <span class="text-secondary">(${name})</span>
+                </a>
+            `
+            dropdownMenu.appendChild(li)
         })
 
         dropdownMenu.removeEventListener('click', this.dropdownClickHandler)
@@ -430,12 +417,8 @@ class ServicesManager {
         document.getElementById('serviceName').value = name
         document.getElementById('serviceColor').value = color
 
-        const ports = ipports.map(ipport => {
-            const parts = ipport.split(':')
-            return parts[parts.length - 1]
-        })
-
-        document.getElementById('servicePorts').value = ports.join('\n')
+        const port = ipports[0].split(':').pop()
+        document.getElementById('servicePorts').value = port
     }
 
     resetAddButton() {
@@ -539,6 +522,24 @@ document.addEventListener('DOMContentLoaded', () => {
             window.flowList.update()
         }
     })
+
+    const portInput = document.getElementById('servicePorts')
+    if (portInput) {
+        portInput.addEventListener('keydown', function(e) {
+            if (
+                !(
+                    (e.key >= '0' && e.key <= '9') ||
+                    ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)
+                )
+            ) {
+                e.preventDefault()
+            }
+        })
+        portInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '')
+        })
+    }
+
     const modal = document.getElementById('servicesModal')
     if (modal) {
         // Load services when the modal is shown
