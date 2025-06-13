@@ -243,7 +243,7 @@ class ServicesManager {
             groupHeader.innerHTML = `
                 <h6 class="dropdown-header d-flex align-items-center" style="background: linear-gradient(90deg, ${color} 0%, ${color} 4px, transparent 4px); padding-left: 12px;">
                     <span class="me-2" style="width: 12px; height: 12px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
-                    ${name}
+                    <span class="dropdown-service-name" title="${name}">${name}</span>
                 </h6>
             `
             dropdownMenu.appendChild(groupHeader)
@@ -252,7 +252,7 @@ class ServicesManager {
             li.innerHTML = `
                 <a class="dropdown-item ps-4" href="#" data-value="${ipport}" style="border-left: 3px solid ${color};">
                     <span class="me-2" style="width: 8px; height: 8px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
-                    • ${ipport} <span class="text-secondary">(${name})</span>
+                    • ${ipport} <span class="dropdown-service-name text-secondary" title="${name}">(${name})</span>
                 </a>
             `
             dropdownMenu.appendChild(li)
@@ -268,7 +268,10 @@ class ServicesManager {
 
                 select.value = value
 
-                dropdownText.textContent = text
+                dropdownText.innerHTML = text.replace(
+                    /\(([^)]+)\)$/,
+                    (_, name) => `<span class="dropdown-service-name" title="${name}">(${name})</span>`
+                )
 
                 const colorMatch = item.style.borderLeft.match(/rgb\([^)]+\)|#[a-fA-F0-9]+/)
                 if (colorMatch) {

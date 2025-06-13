@@ -108,9 +108,10 @@ pre code {
     transition: none !important;
     width: 100%;
     height: 38px !important;   
-    line-height: 0.5 !important; 
+    line-height: 1.2 !important;
     box-sizing: border-box;
-    display: block;
+    display: flex;
+    align-items: center;
 }
 
 .custom-services-dropdown .btn:hover,
@@ -137,6 +138,13 @@ pre code {
     margin-top: 2px; /
 }
 
+.custom-services-dropdown .dropdown-text {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
+}
+
 .custom-services-dropdown .dropdown-item {
     color: #e9ecef;
     font-size: 0.875rem;
@@ -147,6 +155,15 @@ pre code {
 .custom-services-dropdown .dropdown-item:focus {
     background-color: #495057;
     color: white;
+}
+
+.dropdown-service-name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 /*Custom styles for the tick progress container */
@@ -213,4 +230,13 @@ body {
     .services-list-container {
         max-height: 200px !important;
     }
+}
+
+#serviceNameToDelete {
+    display: inline-block;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
 }
