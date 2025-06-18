@@ -356,18 +356,16 @@ class ServicesManager {
             serviceDiv.innerHTML = `
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1 me-3">
+                        <div class="flex-grow-1 me-3" style="min-width: 0;">
                             <h6 class="card-title mb-2 d-flex align-items-center">
                                 <span class="badge me-2" style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%;"></span>
-                                <span class="service-name-badge" style=" 
-                                    max-width: 180px;
-                                    overflow: hidden;
-                                    text-overflow: ellipsis;
-                                    white-space: nowrap;
+                                <span class="service-name-badge" style="
                                     display: inline-block;
                                     vertical-align: middle;
-                                    border-radius: 8px; 
-                                    padding: 4px 8px; 
+                                    max-width: 100%;
+                                    word-wrap: break-word;
+                                    border-radius: 8px;
+                                    padding: 4px 8px;
                                     background-color: ${color};
                                     font-weight: bold;
                                 ">${name}</span>
