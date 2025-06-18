@@ -5,77 +5,80 @@
 
 /* Use Bootstrap icons */
 .bi {
-  fill: currentColor;
-  vertical-align: -.125em;
+    fill: currentColor;
+    vertical-align: -.125em;
 }
 
 /* Disable Bootstrap blue box-shadow on open <select> */
 .form-select:focus {
-  box-shadow: none;
+    box-shadow: none;
 }
 
 /* Disable Bootstrap transition on form elements */
 .btn,
 .form-control,
 .form-select {
-  transition: none;
+    transition: none;
 }
 
 /* Make flows list user-resizable */
 nav.nav-flow {
-  width: 380px;
-  min-width: 300px;
-  resize: horizontal;
-  overflow-x: hidden;
-  overflow-y: visible; 
+    width: 380px;
+    min-width: 300px;
+    resize: horizontal;
+    overflow-x: hidden;
+    overflow-y: visible;
 }
+
 .filter-dropdown {
-  width: 300px;
-  margin-left: -2px !important;
+    width: 300px;
+    margin-left: -2px !important;
 }
 
 /* Use purple background to show active elements */
 .text-bg-purple,
 #flow-list a.active {
-  color: #fff !important;
-  background-color: #59359a !important;
+    color: #fff !important;
+    background-color: #59359a !important;
 }
+
 .border-purple,
 input.is-active,
 select.is-active {
-  border-color: #ac80ff !important;
+    border-color: #ac80ff !important;
 }
 
 /* Change nav pills active color */
 .nav-pills {
-  --bs-nav-pills-link-active-bg: #495057;
+    --bs-nav-pills-link-active-bg: #495057;
 }
 
 /* Fix strange Boostrap behaviour */
 .list-group-item + .list-group-item.active {
-  margin-top: 0;
+    margin-top: 0;
 }
 
 .badge {
-  font-size: 8pt;
+    font-size: 8pt;
 }
+
 .text-bg-none {
-  color: inherit;
+    color: inherit;
 }
 
 pre {
-  white-space: pre-wrap;
-  word-break: break-all;
+    white-space: pre-wrap;
+    word-break: break-all;
 }
 
 .img-payload {
-  max-width: 100%;
-  max-height: 256px;
-  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAIAAABiEdh4AAAAJ0lEQVQoz2OcOXMmAzZw9uxZrOJMDCSCEamBBVfwGRsbj4YS/TQAAH8aB1JXTyw+AAAAAElFTkSuQmCC");
+    max-width: 100%;
+    max-height: 256px;
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAIAAABiEdh4AAAAJ0lEQVQoz2OcOXMmAzZw9uxZrOJMDCSCEamBBVfwGRsbj4YS/TQAAH8aB1JXTyw+AAAAAElFTkSuQmCC");
 }
 
 pre code {
-  padding: .1875em 0;
+    padding: .1875em 0;
 }
 
 .service-badge {
@@ -91,7 +94,8 @@ pre code {
 
 .custom-services-dropdown {
     position: relative;
-    z-index: 1100; 
+    z-index: auto;
+    /*z-index: 1100;*/
     width: 100%;
     margin-bottom: 0;
 }
@@ -102,12 +106,12 @@ pre code {
     color: #e9ecef !important;
     font-size: 1rem !important;
     padding: 0.375rem 0.75rem !important;
-    border-radius: 0.375rem !important;
+    /*border-radius: 0.375rem !important;*/
     font-weight: 400 !important;
     text-align: left !important;
     transition: none !important;
     width: 100%;
-    height: 38px !important;   
+    height: 38px !important;
     line-height: 1.2 !important;
     box-sizing: border-box;
     display: flex;
@@ -126,16 +130,25 @@ pre code {
 .custom-services-dropdown .dropdown-menu {
     background-color: #212529;
     border: 1px solid #495057;
-    border-radius: 0.375rem;
+    z-index: 1060 !important;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 1200; 
     width: 100% !important;
     max-height: 300px;
     overflow-y: auto;
-    margin-top: 2px; /
+    margin-top: 2px;
+
+    /* Nascondi scrollbar */
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.custom-services-dropdown .dropdown-menu::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
 }
 
 .custom-services-dropdown .dropdown-text {
@@ -210,7 +223,7 @@ body {
 
 .services-list-container .card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Modal responsive */
@@ -218,15 +231,15 @@ body {
     .modal-dialog {
         margin: 0.5rem;
     }
-    
+
     .modal-content {
         max-height: 95vh !important;
     }
-    
+
     .modal-body {
         max-height: calc(95vh - 120px) !important;
     }
-    
+
     .services-list-container {
         max-height: 200px !important;
     }

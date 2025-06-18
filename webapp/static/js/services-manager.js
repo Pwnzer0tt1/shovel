@@ -192,11 +192,10 @@ class ServicesManager {
             customDropdown = document.createElement('div')
             customDropdown.className = 'custom-services-dropdown dropdown'
             customDropdown.innerHTML = `
-                <button class="btn btn-sm shadow-none dropdown-toggle w-100 text-start py-2" type="button" data-bs-toggle="dropdown" 
-                       style="border: none; background-color: transparent; border-radius: 0; box-shadow: none !important; outline: none;">
+                <button class="btn btn-sm shadow-none dropdown-toggle w-100 text-start py-2 rounded-0" type="button" data-bs-toggle="dropdown">
                     <span class="dropdown-text">Select a service...</span>
                 </button>
-                <ul class="dropdown-menu w-100 custom-services-menu shadow-sm">
+                <ul class="dropdown-menu dropdown-menu-dark rounded-0 w-100 custom-services-menu shadow-sm">
                 </ul>
             `
             wrapper.insertBefore(customDropdown, wrapper.firstChild)
