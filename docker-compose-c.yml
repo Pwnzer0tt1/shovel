@@ -42,9 +42,22 @@ services:
         ENTRYPOINT ["pcap-broker"]
     restart: always
     volumes:
-      - "~/.ssh/id_rsa:/root/.ssh/id_rsa:ro"
+      - "~/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro"
     environment:
       PCAP_COMMAND: |-
-        ssh root@127.0.0.1 -oStrictHostKeyChecking=no
+        ssh root@10.60.1.1 -oStrictHostKeyChecking=no
         tcpdump -U --immediate-mode -ni game -s 65535 -w - not tcp port 22
       LISTEN_ADDRESS: 0.0.0.0:4242
+
+  tshark:
+    build:
+      context: ./tshark
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - PCAP_TCP_DOMAIN=pcap-broker
+      - PCAP_TCP_PORT=4242
+      - PCAP_FILE_NAME=dump
+    volumes:
+      - ./tshark/dumps:/dump-pcap
+    entrypoint: docker-entrypoint.sh
