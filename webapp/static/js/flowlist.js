@@ -254,9 +254,9 @@ class FlowList {
                 e.currentTarget.classList.add('btn-success')
 
                 // Start auto update
-                this.updatePreservingScroll(false)
+                this.updatePreservingScroll()
                 this.autoUpdateInterval = setInterval(() => {
-                    this.updatePreservingScroll(false)
+                    this.updatePreservingScroll()
                 }, this.refreshRate * 1000)
             } else {
                 e.currentTarget.classList.remove('btn-success')
@@ -696,7 +696,7 @@ const initFlowList = async () => {
 
     if (flowList.autoUpdateEnabled && flowList.tickLength > 0) {
         flowList.autoUpdateInterval = setInterval(() => {
-            flowList.updatePreservingScroll(false)
+            flowList.updatePreservingScroll()
         }, flowList.refreshRate * 1000)
     }
 }
