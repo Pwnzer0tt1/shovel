@@ -8,6 +8,7 @@ import json
 import time
 import os
 import fcntl
+import logging
 
 import aiosqlite
 from starlette.applications import Starlette
@@ -20,6 +21,9 @@ from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
 SERVICES_CONFIG_FILE = "./services_config.json"
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
@@ -65,8 +69,9 @@ def load_services_config():
 
             return data
         except (json.JSONDecodeError, FileNotFoundError):
-            print(f"Errore leggendo {SERVICES_CONFIG_FILE}, ritorno dizionario vuoto")
+            logger.error("Error reading %s, returning empty dictionary", SERVICES_CONFIG_FILE)
             return {}
+
 
 def save_services_config(data):
     """Save services configuration to JSON file with file locking"""
@@ -77,10 +82,10 @@ def save_services_config(data):
                 f.flush()
                 os.fsync(f.fileno())
 
-            print(f"Configurazione salvata correttamente in {SERVICES_CONFIG_FILE}")
+            logger.info("Configuration saved successfully in %s", SERVICES_CONFIG_FILE)
 
         except Exception as e:
-            print(f"Errore salvando {SERVICES_CONFIG_FILE}: {e}")
+            logger.error("Error saving %s: %s", SERVICES_CONFIG_FILE, e)
             raise
 
 
@@ -122,7 +127,7 @@ async def api_services_delete(request):
         save_services_config(CTF_CONFIG["services"])
         return JSONResponse({"ok": True})
 
-    raise HTTPException(404, "Servizio non trovato")
+    raise HTTPException(404, "Service not found")
 
 
 def row_to_dict(row: aiosqlite.Row) -> dict:
@@ -155,18 +160,26 @@ async def api_flow_list(request):
 
     # Query flows and associated tags using filters
     query = """
-        WITH fsrvs AS (SELECT value FROM json_each(?1)),
-          ftags_req AS (SELECT value FROM json_each(?2)),
-          ftags_deny AS (SELECT value FROM json_each(?3)),
-          fsearchfid AS (SELECT value FROM json_each(?6))
-        SELECT id, ts_start, ts_end, dest_ipport, app_proto, metadata,
-          (SELECT GROUP_CONCAT(tag) FROM alert WHERE flow_id = flow.id) AS tags
-        FROM flow WHERE ts_start <= ?4 AND (?5 = app_proto OR ?5 IS NULL)
-    """
+            WITH fsrvs AS (SELECT value FROM json_each(?1)),
+                 ftags_req AS (SELECT value FROM json_each(?2)),
+                 ftags_deny AS (SELECT value FROM json_each(?3)),
+                 fsearchfid AS (SELECT value FROM json_each(?6))
+            SELECT id,
+                   ts_start,
+                   ts_end,
+                   dest_ipport,
+                   app_proto,
+                   metadata,
+                   (SELECT GROUP_CONCAT(tag) FROM alert WHERE flow_id = flow.id) AS tags
+            FROM flow
+            WHERE ts_start <= ?4
+              AND (?5 = app_proto OR ?5 IS NULL) \
+            """
     if services == ["!"]:
         # Filter flows related to no services
         query += "AND NOT (src_ipport IN fsrvs OR dest_ipport IN fsrvs)"
-        services = [ipport for s in CTF_CONFIG["services"].values() for ipport in (s["ipports"] if isinstance(s, dict) else s)]
+        services = [ipport for s in CTF_CONFIG["services"].values() for ipport in
+                    (s["ipports"] if isinstance(s, dict) else s)]
     elif services:
         query += "AND (src_ipport IN fsrvs OR dest_ipport IN fsrvs)"
     if tags_deny:
@@ -390,29 +403,31 @@ async def api_replay_raw(request):
         "raw-replay.py.jinja2", context, media_type="text/plain"
     )
 
+
 async def api_refresh_rate_get(request):
     """GET /api/refresh-rate - Get current refresh rate"""
     return JSONResponse({"refresh_rate": CTF_CONFIG["refresh_rate"]})
+
 
 async def api_refresh_rate_post(request):
     """POST /api/refresh-rate - Update refresh rate"""
     try:
         data = await request.json()
         refresh_rate = int(data.get("refresh_rate", 120))
-        
+
         if refresh_rate < 1:
             raise ValueError("Refresh rate must be at least 1 second")
-            
+
         CTF_CONFIG["refresh_rate"] = refresh_rate
-        
+
         # Carica la configurazione corrente e aggiorna solo il refresh_rate
         current_config = load_services_config()
         if not current_config:
             current_config = {"services": CTF_CONFIG["services"]}
-            
+
         current_config["refresh_rate"] = refresh_rate
         save_services_config(current_config)
-        
+
         return JSONResponse({"success": True, "refresh_rate": refresh_rate})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)
@@ -423,7 +438,7 @@ async def open_database(database_uri: str, text_factory=str) -> aiosqlite.Connec
         try:
             con = await aiosqlite.connect(database_uri, uri=True)
         except aiosqlite.OperationalError as e:
-            print(f"Unable to open database '{database_uri}': {e}", flush=True)
+            logger.error("Unable to open database '%s': %s", database_uri, e)
             time.sleep(1)
             continue
         break

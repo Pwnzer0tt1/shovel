@@ -27,7 +27,7 @@ class FlowList {
         this.autoUpdateBtn.classList.add(this.autoUpdateEnabled ? 'btn-success' : 'btn-danger')
         this.initTickProgressBar()
     }
-    
+
 
     async init() {
         // On left/right arrow keys, go to previous/next flow
@@ -244,7 +244,6 @@ class FlowList {
         // Handle auto update button click
         document.getElementById('autoUpdateBtn').addEventListener('click', e => {
             this.autoUpdateEnabled = !this.autoUpdateEnabled
-            console.log("Auto Update: ", this.autoUpdateEnabled)
 
             localStorage.setItem('autoUpdateEnabled', this.autoUpdateEnabled.toString())
             e.currentTarget.textContent = `Auto-Update: ${this.autoUpdateEnabled ? 'ON' : 'OFF'}`
@@ -355,7 +354,7 @@ class FlowList {
         this.tickInfo = null
         this.tickTimer = null
         this.tickProgressInterval = null
-        
+
         this.initTickElements()
     }
 
@@ -380,7 +379,7 @@ class FlowList {
         if (!this.tickProgressBar) {
             this.assignTickElements()
         }
-        
+
         if (!this.tickProgressBar || !this.tickInfo || !this.tickTimer) {
             setTimeout(() => this.startTickProgress(), 100)
             return
@@ -408,7 +407,7 @@ class FlowList {
 
             // Update the tick info text
             this.tickInfo.textContent = `Tick ${currentTick}`
-            
+
             // update the timer text
             const minutes = Math.floor(remainingSeconds / 60)
             const seconds = Math.floor(remainingSeconds % 60)
@@ -436,7 +435,7 @@ class FlowList {
             clearInterval(this.tickProgressInterval)
             this.tickProgressInterval = null
         }
-        
+
         if (this.tickProgressBar && this.tickInfo && this.tickTimer) {
             this.tickProgressBar.style.width = '0%'
             this.tickProgressBar.setAttribute('aria-valuenow', '0')
@@ -698,7 +697,6 @@ const initFlowList = async () => {
     if (flowList.autoUpdateEnabled && flowList.tickLength > 0) {
         flowList.autoUpdateInterval = setInterval(() => {
             flowList.updatePreservingScroll(false)
-            console.log("Updating flow list...")
         }, flowList.refreshRate * 1000)
     }
 }

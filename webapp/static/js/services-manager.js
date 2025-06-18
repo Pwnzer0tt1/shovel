@@ -5,7 +5,7 @@ class ServicesManager {
         this.services = {}
         this.currentEditButton = null
         this.isLoaded = false
-        this.refreshRate = 120 
+        this.refreshRate = 120
     }
 
     async loadRefreshRate() {
@@ -31,13 +31,13 @@ class ServicesManager {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ refresh_rate: refreshRate })
+                body: JSON.stringify({refresh_rate: refreshRate})
             })
 
             if (response.ok) {
                 this.refreshRate = refreshRate
                 this.showToast('Refresh rate updated successfully!', 'success')
-                
+
                 if (window.flowList) {
                     window.flowList.refreshRate = refreshRate
                     if (window.flowList.autoUpdateEnabled && window.flowList.autoUpdateInterval) {
@@ -413,7 +413,6 @@ class ServicesManager {
     async editService(name) {
         const addBtn = document.getElementById('addServiceBtn')
         if (addBtn) {
-            console.log("Changing add button text and classes for editing")
             addBtn.textContent = 'Confirm changes'
             addBtn.classList.remove('btn-primary')
             addBtn.classList.add('btn-success')
@@ -534,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const portInput = document.getElementById('servicePorts')
     if (portInput) {
-        portInput.addEventListener('keydown', function(e) {
+        portInput.addEventListener('keydown', function (e) {
             if (
                 !(
                     (e.key >= '0' && e.key <= '9') ||
@@ -544,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault()
             }
         })
-        portInput.addEventListener('input', function(e) {
+        portInput.addEventListener('input', function (e) {
             this.value = this.value.replace(/\D/g, '')
         })
     }
@@ -553,6 +552,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modal) {
         // Load services when the modal is shown
         modal.addEventListener('show.bs.modal', () => {
+            const colorInput = document.getElementById('serviceColor');
+            console.log("Generating random color for service input ", colorInput)
+            if (colorInput) {
+                colorInput.value = servicesManager.generateRandomColor();
+            }
             servicesManager.loadServices()
         })
 
@@ -573,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveRefreshRateBtn.addEventListener('click', async () => {
                 const refreshRateInput = document.getElementById('refreshRateInput')
                 const refreshRate = parseInt(refreshRateInput.value)
-                
+
                 if (refreshRate < 1) {
                     servicesManager.showToast('Refresh rate must be at least 1 second', 'error')
                     return
