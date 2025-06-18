@@ -50,9 +50,9 @@ services:
       LISTEN_ADDRESS: 0.0.0.0:4242
 
   tshark:
-    build: 
+    build:
       context: ./tshark
-      dockerfile: DOCKERFILE
+      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       - PCAP_TCP_DOMAIN=pcap-broker
@@ -60,6 +60,4 @@ services:
       - PCAP_FILE_NAME=dump
     volumes:
       - ./tshark/dumps:/dump-pcap
-    # command: sleep infinity
     entrypoint: docker-entrypoint.sh
-
