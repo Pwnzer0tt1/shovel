@@ -560,7 +560,7 @@ def handle_start_command(args):
     print_separator(char="═")
 
 
-def handle_stop_command(args):
+def handle_stop_command():
     """Handle the stop command"""
     print_progress("Stopping Shovel...")
 
@@ -700,7 +700,7 @@ def clear_config_files():
         print_info("No config files found to clear.")
 
 
-def handle_status_command(args):
+def handle_status_command():
     """Handle the status command - show container status"""
     print_progress("Checking Shovel status...")
 
@@ -762,43 +762,7 @@ def handle_logs_command(args):
         sys.exit(1)
 
 
-def handle_exec_command(args):
-    """Handle the exec command - execute commands in containers"""
-    print_progress("Executing command in container...")
-
-    # Check if .env exists to provide context
-    if not os.path.exists(ENV_FILE):
-        print_warning("No configuration file found. Using default compose file...")
-
-    # Default to mode C compose file
-    compose_file = COMPOSE_FILES["C"]
-
-    # Check if compose file exists
-    if not os.path.exists(compose_file):
-        print_error(f"Docker compose file not found: {compose_file}")
-        print_info("Cannot execute commands without compose file.")
-        sys.exit(1)
-
-    # Build exec command
-    cmd = ["docker", "compose", "-f", compose_file, "exec"]
-    if args.compose_args:
-        cmd.extend(args.compose_args)
-    else:
-        print_error("Usage: ./start.py exec <service> <command>")
-        print_info("Example: ./start.py exec shovel-web bash")
-        sys.exit(1)
-
-    print_progress(f"Executing: {' '.join(cmd)}")
-    try:
-        result = subprocess.run(cmd)
-        sys.exit(result.returncode)
-    except subprocess.CalledProcessError as e:
-        print_error(f"Failed to execute command: {e}")
-        print_info("Make sure the container is running and the service name is correct.")
-        sys.exit(1)
-
-
-def handle_help_command(args):
+def handle_help_command():
     """Handle the help command - show help information"""
     parser = create_parser()
     parser.print_help()
@@ -823,7 +787,6 @@ def create_parser():
   {Colors.CYAN}./start.py logs{Colors.END}                                   # Follow all container logs
   {Colors.CYAN}./start.py logs --tail 100{Colors.END}                        # Last 100 logs of all containers
   {Colors.CYAN}./start.py logs webapp --tail 50{Colors.END}                  # Last 50 logs of specific service
-  {Colors.CYAN}./start.py exec webapp sh{Colors.END}                         # Execute bash in container
   {Colors.CYAN}./start.py help{Colors.END}                                   # Show this help message
         """
     )
@@ -871,15 +834,6 @@ def create_parser():
 
     # Logs command - NO ARGUMENTS, uses sys.argv directly
     subparsers.add_parser("logs", help="Follow container logs")
-
-    # Exec command - execute commands in containers
-    parser_exec = subparsers.add_parser("exec", help="Execute command in container")
-    parser_exec.add_argument(
-        "compose_args",
-        nargs=argparse.REMAINDER,
-        help="Container and command (e.g., 'webapp bash')",
-        default=[],
-    )
 
     return parser
 
@@ -939,17 +893,15 @@ def main():
 
     # Handle commands (logs is already handled above)
     if args.command == "help":
-        handle_help_command(args)
+        handle_help_command()
     elif args.command == "start":
         handle_start_command(args)
     elif args.command == "stop":
-        handle_stop_command(args)
+        handle_stop_command()
     elif args.command == "clear":
         handle_clear_command(args)
     elif args.command == "status":
-        handle_status_command(args)
-    elif args.command == "exec":
-        handle_exec_command(args)
+        handle_status_command()
     else:
         parser.print_help()
 
