@@ -50,12 +50,12 @@ class ServicesManager {
                 return true
             } else {
                 const errorData = await response.json()
-                this.showToast(`Error: ${errorData.error}`, 'error')
+                this.showToast(`Error: ${errorData.error}`, 'danger')
                 return false
             }
         } catch (error) {
             console.error('Error saving refresh rate:', error)
-            this.showToast('Error saving refresh rate', 'error')
+            this.showToast('Error saving refresh rate', 'danger')
             return false
         }
     }
@@ -79,18 +79,24 @@ class ServicesManager {
         const colorInput = document.getElementById('serviceColor')
 
         const name = nameInput.value.trim()
+        // Prevent adding duplicate service names when not editing
+        if (!this.currentEditButton && this.services[name]) {
+            this.showToast('Service already exists, click edit to change its details', 'danger')
+            return
+        }
+
         const port = portsInput.value.trim()
         const color = colorInput.value
 
         const portRegex = /^\d+$/;
 
         if (!name || !portRegex.test(port)) {
-            this.showToast('Please enter a valid port (only one number, e.g. 8000)', 'error')
+            this.showToast('Please enter a valid port (only one number, e.g. 8000)', 'danger')
             return
         }
 
         if (!name || port.length === 0) {
-            this.showToast('Please fill in all fields', 'error')
+            this.showToast('Please fill in all fields', 'danger')
             return
         }
 
@@ -129,11 +135,11 @@ class ServicesManager {
                 this.restoreEditButton()
                 this.showToast('Service saved successfully!', 'success')
             } else {
-                this.showToast('Error saving service', 'error')
+                this.showToast('Error saving service', 'danger')
             }
         } catch (error) {
             console.error('Error:', error)
-            this.showToast('Error saving service', 'error')
+            this.showToast('Error saving service', 'danger')
         }
     }
 
@@ -550,7 +556,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load services when the modal is shown
         modal.addEventListener('show.bs.modal', () => {
             const colorInput = document.getElementById('serviceColor');
-            console.log("Generating random color for service input ", colorInput)
             if (colorInput) {
                 colorInput.value = servicesManager.generateRandomColor();
             }
@@ -576,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const refreshRate = parseInt(refreshRateInput.value)
 
                 if (refreshRate < 1) {
-                    servicesManager.showToast('Refresh rate must be at least 1 second', 'error')
+                    servicesManager.showToast('Refresh rate must be at least 1 second', 'danger')
                     return
                 }
 
