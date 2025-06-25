@@ -6,6 +6,8 @@ class ServicesManager {
         this.currentEditButton = null
         this.isLoaded = false
         this.refreshRate = 120
+        const ipElem = document.getElementById('serviceIP')
+        this.originalIp = ipElem ? ipElem.value : ''
     }
 
     async loadRefreshRate() {
@@ -31,7 +33,7 @@ class ServicesManager {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({refresh_rate: refreshRate})
+                body: JSON.stringify({ refresh_rate: refreshRate })
             })
 
             if (response.ok) {
@@ -78,31 +80,46 @@ class ServicesManager {
         const portsInput = document.getElementById('servicePorts')
         const colorInput = document.getElementById('serviceColor')
 
+        // Check if name input is empty
         const name = nameInput.value.trim()
+        if (!name) {
+            this.showToast('Service name cannot be empty', 'danger')
+            return
+        }
+
         // Prevent adding duplicate service names when not editing
         if (!this.currentEditButton && this.services[name]) {
             this.showToast('Service already exists, click edit to change its details', 'danger')
             return
         }
-
+        
+        // Validate port input
         const port = portsInput.value.trim()
-        const color = colorInput.value
-
         const portRegex = /^\d+$/;
-
-        if (!name || !portRegex.test(port)) {
+        if (!portRegex.test(port)) {
             this.showToast('Please enter a valid port (only one number, e.g. 8000)', 'danger')
             return
         }
-
-        if (!name || port.length === 0) {
-            this.showToast('Please fill in all fields', 'danger')
+        
+        // Validate IP address
+        const ip = document.getElementById('serviceIP').value
+        const ip_pattern = /^(\d{1,3}\.){0,3}\d{1,3}$/
+        if (!ip_pattern.test(ip)) {
+            this.showToast('Please enter a valid IP address', 'danger')
             return
+        } else {
+            const octets = ip.split('.')
+            for (const octet of octets) {
+                if (parseInt(octet) > 255) {
+                    this.showToast('Please enter a valid IP address', 'danger')
+                    return
+                }
+            }
         }
-
-        const defaultIp = document.getElementById('serviceIP').value
-        const ipports = [`${defaultIp}:${port}`]
-
+        
+        const ipports = [`${ip}:${port}`]
+        const color = colorInput.value
+        
         const payload = {
             name: name,
             ipports: ipports,
@@ -133,6 +150,7 @@ class ServicesManager {
                 colorInput.value = this.generateRandomColor()
                 this.resetAddButton()
                 this.restoreEditButton()
+                this.restoreIPinput()
                 this.showToast('Service saved successfully!', 'success')
             } else {
                 this.showToast('Error saving service', 'danger')
@@ -481,6 +499,23 @@ class ServicesManager {
         this.restoreEditButton();
     }
 
+    // Restore the IP editing button to its original state
+    restoreIPinput() {
+        const editIpBtn = document.getElementById('editServiceIPBtn');
+        const ipInput = document.getElementById('serviceIP');
+        if (editIpBtn && ipInput) {
+            ipInput.setAttribute('readonly', '')
+            ipInput.value = this.originalIp
+            editIpBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                </svg>`
+            editIpBtn.classList.remove('btn-warning')
+            editIpBtn.classList.add('btn-success')
+            editIpBtn.title = 'Edit IP'
+        }
+    }
+
     // Show a custom Toast message
     showToast(message, type = 'success') {
         let toastContainer = document.getElementById('toast-container');
@@ -551,6 +586,48 @@ document.addEventListener('DOMContentLoaded', () => {
         })
     }
 
+    const editIpBtn = document.getElementById('editServiceIPBtn')
+    const ipInput = document.getElementById('serviceIP')
+    if (ipInput) {
+        ipInput.addEventListener('keydown', function (e) {
+            if (
+                !(
+                    (e.key >= '0' && e.key <= '9') ||
+                    e.key === '.' ||
+                    ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)
+                )
+            ) {
+                e.preventDefault()
+            }
+        })
+        ipInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9.]/g, '')
+            // Limit to 15 characters max for IP address
+            if (this.value.length > 15) {
+                this.value = this.value.substring(0, 15)
+            }
+        })
+    }
+
+    if (editIpBtn && ipInput) {
+        editIpBtn.addEventListener('click', () => {
+            if (ipInput.hasAttribute('readonly')) {
+                ipInput.removeAttribute('readonly')
+                ipInput.focus()
+
+                editIpBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                    </svg>`
+                editIpBtn.classList.remove('btn-success')
+                editIpBtn.classList.add('btn-warning')
+                editIpBtn.title = 'Cancel editing'
+            } else {
+                servicesManager.restoreIPinput()
+            }
+        })
+    }
+
     const modal = document.getElementById('servicesModal')
     if (modal) {
         // Load services when the modal is shown
@@ -568,6 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('servicePorts').value = ''
             servicesManager.resetAddButton()
             servicesManager.restoreEditButton()
+            servicesManager.restoreIPinput()
 
             servicesManager.loadServices().then(() => {
                 window.location.reload()
