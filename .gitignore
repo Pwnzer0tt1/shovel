@@ -13,7 +13,7 @@ suricata/suricata-eve-sqlite-output/target
 services_config.json
 
 # Python
-*/__pycache__
+**/__pycache__
 .ruff_cache
 
 # General

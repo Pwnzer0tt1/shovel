@@ -201,7 +201,7 @@ class ServicesManager {
                 <button class="btn btn-sm shadow-none dropdown-toggle w-100 text-start py-2 rounded-0" type="button" data-bs-toggle="dropdown">
                     <span class="dropdown-text">Select a service...</span>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-dark rounded-0 w-100 custom-services-menu shadow-sm">
+                <ul class="dropdown-menu rounded-0 w-100 custom-services-menu shadow-sm">
                 </ul>
             `
             wrapper.insertBefore(customDropdown, wrapper.firstChild)
@@ -257,7 +257,7 @@ class ServicesManager {
             li.innerHTML = `
                 <a class="dropdown-item ps-4" href="#" data-value="${ipport}" style="border-left: 3px solid ${color};">
                     <span class="me-2" style="width: 8px; height: 8px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
-                    • ${ipport} <span class="dropdown-service-name text-secondary" title="${name}">(${name})</span>
+                    • ${ipport} <span class="dropdown-service-name text-secondary" title="${name.split('_')[0]}">(${name.split('_')[0]})</span>
                 </a>
             `
             dropdownMenu.appendChild(li)

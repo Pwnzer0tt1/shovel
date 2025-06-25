@@ -537,7 +537,7 @@ class FlowList {
                 const tick = Math.floor((flow.ts_start / 1000000 - this.startTs) / this.tickLength)
                 if (tick !== this.lastTick) {
                     const tickEl = document.createElement('span')
-                    tickEl.classList.add('list-group-item', 'sticky-top', 'pt-3', 'pb-1', 'px-2', 'border-0', 'border-bottom', 'bg-light-subtle', 'text-center', 'fw-semibold')
+                    tickEl.classList.add('list-group-item', 'sticky-top', 'pt-3', 'pb-1', 'px-2', 'border-0', 'border-bottom', 'bg-body-secondary', 'text-center', 'fw-semibold')
                     tickEl.textContent = `Tick ${tick}`
                     flowList.appendChild(tickEl)
                     this.lastTick = tick
