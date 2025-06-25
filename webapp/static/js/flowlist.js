@@ -273,7 +273,10 @@ class FlowList {
         const appData = document.getElementById('app').dataset
         this.startTs = Math.floor(Date.parse(appData.startDate) / 1000)
         this.tickLength = Number(appData.tickLength)
-        this.refreshRate = Number(appData.refreshRate)
+        const storedRefreshRate = localStorage.getItem('refreshRate')
+        this.refreshRate = storedRefreshRate !== null
+            ? Number(storedRefreshRate)
+            : Number(appData.refreshRate)
         this.tags = []
         this.update()
 
