@@ -1,0 +1,739 @@
+'use strict'
+
+class ServicesManager {
+    constructor() {
+        this.services = {}
+        this.currentEditButton = null
+        this.isLoaded = false
+        this.refreshRate = 120
+        const ipElem = document.getElementById('serviceIP')
+        this.originalIp = ipElem ? ipElem.value : ''
+    }
+
+    async loadRefreshRate() {
+        try {
+            const stored = localStorage.getItem('refreshRate')
+            if (stored !== null) {
+                this.refreshRate = parseInt(stored)
+            } else {
+                const response = await fetch('/api/refresh-rate')
+                if (response.ok) {
+                    const data = await response.json()
+                    this.refreshRate = data.refresh_rate
+                    const refreshRateInput = document.getElementById('refreshRateInput')
+                    if (refreshRateInput) {
+                        refreshRateInput.value = this.refreshRate
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error loading refresh rate:', error)
+        }
+    }
+
+    async saveRefreshRate(refreshRate) {
+        try {
+            // Sanitize refresh rate
+            if (!refreshRate || isNaN(refreshRate) || refreshRate < 1) {
+                throw new Error('Refresh rate must be a number greater than or equal to 1');
+            }
+            localStorage.setItem('refreshRate', refreshRate.toString())
+            this.refreshRate = refreshRate
+            this.showToast('Refresh rate updated successfully!', 'success')
+            return true
+        } catch (error) {
+            this.showToast('Error saving refresh rate', 'danger')
+            return false
+        }
+        // try {
+        //     const response = await fetch('/api/refresh-rate', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json'
+        //         },
+        //         body: JSON.stringify({ refresh_rate: refreshRate })
+        //     })
+
+        //     if (response.ok) {
+        //         localStorage.setItem('refreshRate', refreshRate.toString())
+        //         this.refreshRate = refreshRate
+        //         this.showToast('Refresh rate updated successfully!', 'success')
+
+        //         if (window.flowList) {
+        //             window.flowList.refreshRate = refreshRate
+        //             if (window.flowList.autoUpdateEnabled && window.flowList.autoUpdateInterval) {
+        //                 clearInterval(window.flowList.autoUpdateInterval)
+        //                 window.flowList.autoUpdateInterval = setInterval(() => {
+        //                     window.flowList.updatePreservingScroll(false)
+        //                 }, refreshRate * 1000)
+        //             }
+        //         }
+        //         return true
+        //     } else {
+        //         const errorData = await response.json()
+        //         this.showToast(`Error: ${errorData.error}`, 'danger')
+        //         return false
+        //     }
+        // } catch (error) {
+        //     console.error('Error saving refresh rate:', error)
+        //     this.showToast('Error saving refresh rate', 'danger')
+        //     return false
+        // }
+    }
+
+    async loadServices() {
+        try {
+            const response = await fetch('/api/services')
+            this.services = await response.json()
+            this.isLoaded = true
+            this.updateServicesSelect()
+            this.updateServicesList()
+            window.dispatchEvent(new CustomEvent('servicesLoaded'))
+        } catch (error) {
+            console.error('Error loading services:', error)
+        }
+    }
+
+    async addService() {
+        const nameInput = document.getElementById('serviceName')
+        const portsInput = document.getElementById('servicePorts')
+        const colorInput = document.getElementById('serviceColor')
+
+        // Check if name input is empty
+        const name = nameInput.value.trim()
+        if (!name) {
+            this.showToast('Service name cannot be empty', 'danger')
+            return
+        }
+
+        // Prevent adding duplicate service names when not editing
+        if (!this.currentEditButton && this.services[name]) {
+            this.showToast('Service already exists, click edit to change its details', 'danger')
+            return
+        }
+        
+        // Validate port input
+        const port = portsInput.value.trim()
+        const portRegex = /^\d+$/;
+        if (!portRegex.test(port)) {
+            this.showToast('Please enter a valid port (only one number, e.g. 8000)', 'danger')
+            return
+        }
+        
+        // Validate IP address
+        const ip = document.getElementById('serviceIP').value
+        const ip_pattern = /^(\d{1,3}\.){0,3}\d{1,3}$/
+        if (!ip_pattern.test(ip)) {
+            this.showToast('Please enter a valid IP address', 'danger')
+            return
+        } else {
+            const octets = ip.split('.')
+            for (const octet of octets) {
+                if (parseInt(octet) > 255) {
+                    this.showToast('Please enter a valid IP address', 'danger')
+                    return
+                }
+            }
+        }
+        
+        const ipports = [`${ip}:${port}`]
+        const color = colorInput.value
+        
+        const payload = {
+            name: name,
+            ipports: ipports,
+            color: color
+        }
+
+        // If editing an existing service, include the old name
+        if (this.currentEditButton) {
+            const oldName = this.currentEditButton.dataset.serviceName
+            if (oldName !== name) {
+                payload.old_name = oldName
+            }
+        }
+
+        try {
+            const response = await fetch('/api/services', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+
+            if (response.ok) {
+                await this.loadServices()
+                nameInput.value = ''
+                portsInput.value = ''
+                colorInput.value = this.generateRandomColor()
+                this.resetAddButton()
+                this.restoreEditButton()
+                this.restoreIPinput()
+                this.showToast('Service saved successfully!', 'success')
+            } else {
+                this.showToast('Error saving service', 'danger')
+            }
+        } catch (error) {
+            console.error('Error:', error)
+            this.showToast('Error saving service', 'danger')
+        }
+    }
+
+    async deleteService(name) {
+        try {
+            const response = await fetch(`/api/services/${encodeURIComponent(name)}`, {
+                method: 'DELETE'
+            })
+
+            if (response.ok) {
+                await this.loadServices()
+                this.showToast(`Service <strong>${name}</strong> deleted successfully`, 'danger');
+            } else {
+                alert('Error in deleting service')
+            }
+        } catch (error) {
+            console.error('Connection Error:', error)
+            alert('Connection Error')
+        }
+    }
+
+    showDeleteConfirmModal(serviceName) {
+        const modal = document.getElementById('deleteConfirmModal');
+        const bsModal = new bootstrap.Modal(modal);
+
+        document.getElementById('serviceNameToDelete').textContent = serviceName;
+
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+        newConfirmBtn.addEventListener('click', async () => {
+            await this.deleteService(serviceName);
+            bsModal.hide();
+        });
+
+        bsModal.show();
+    }
+
+    updateServicesSelect() {
+        const select = document.getElementById('services-select')
+        if (!select) return
+
+        const currentValue = select.value
+
+        const optionsToKeep = Array.from(select.children).slice(0, 2)
+        select.innerHTML = ''
+        optionsToKeep.forEach(opt => select.appendChild(opt))
+
+        const wrapper = select.parentNode
+        let customDropdown = wrapper.querySelector('.custom-services-dropdown')
+
+        if (!customDropdown) {
+            select.style.display = 'none'
+
+            customDropdown = document.createElement('div')
+            customDropdown.className = 'custom-services-dropdown dropdown'
+            customDropdown.innerHTML = `
+                <button class="btn btn-sm shadow-none dropdown-toggle w-100 text-start py-2 rounded-0" type="button" data-bs-toggle="dropdown">
+                    <span class="dropdown-text">Select a service...</span>
+                </button>
+                <ul class="dropdown-menu rounded-0 w-100 custom-services-menu shadow-sm">
+                </ul>
+            `
+            wrapper.insertBefore(customDropdown, wrapper.firstChild)
+        }
+
+        const dropdownButton = customDropdown.querySelector('button')
+        const dropdownMenu = customDropdown.querySelector('.dropdown-menu')
+        const dropdownText = customDropdown.querySelector('.dropdown-text')
+
+        dropdownMenu.innerHTML = ''
+        optionsToKeep.forEach(option => {
+            if (option.tagName === 'OPTION') {
+                const li = document.createElement('li')
+                li.innerHTML = `<a class="dropdown-item" href="#" data-value="${option.value}">${option.textContent}</a>`
+                dropdownMenu.appendChild(li)
+            }
+        })
+
+        if (Object.keys(this.services).length > 0) {
+            const separator = document.createElement('li')
+            separator.innerHTML = '<hr class="dropdown-divider">'
+            dropdownMenu.appendChild(separator)
+        }
+
+        Object.entries(this.services).forEach(([name, serviceData]) => {
+            const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+            const color = serviceData.color || '#007bff'
+
+            const ipport = ipports[0]
+
+            const optgroup = document.createElement('optgroup')
+            optgroup.label = name
+            optgroup.dataset.ipports = ipports.join(' ')
+            optgroup.dataset.color = color
+
+            const option = document.createElement('option')
+            option.value = ipport
+            option.textContent = `${ipport} (${name})`
+            optgroup.appendChild(option)
+
+            select.appendChild(optgroup)
+
+            const groupHeader = document.createElement('li')
+            groupHeader.innerHTML = `
+                <h6 class="dropdown-header d-flex align-items-center" style="background: linear-gradient(90deg, ${color} 0%, ${color} 4px, transparent 4px); padding-left: 12px;">
+                    <span class="me-2" style="width: 12px; height: 12px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
+                    <span class="dropdown-service-name" title="${name}">${name}</span>
+                </h6>
+            `
+            dropdownMenu.appendChild(groupHeader)
+
+            const li = document.createElement('li')
+            li.innerHTML = `
+                <a class="dropdown-item ps-4" href="#" data-value="${ipport}" style="border-left: 3px solid ${color};">
+                    <span class="me-2" style="width: 8px; height: 8px; background-color: ${color}; border-radius: 50%; display: inline-block;"></span>
+                    • ${ipport} <span class="dropdown-service-name text-secondary" title="${name.split('_')[0]}">(${name.split('_')[0]})</span>
+                </a>
+            `
+            dropdownMenu.appendChild(li)
+        })
+
+        dropdownMenu.removeEventListener('click', this.dropdownClickHandler)
+        this.dropdownClickHandler = (e) => {
+            e.preventDefault()
+            const item = e.target.closest('a[data-value]')
+            if (item) {
+                const value = item.getAttribute('data-value')
+                const text = item.textContent.trim()
+
+                select.value = value
+
+                dropdownText.innerHTML = text.replace(
+                    /\(([^)]+)\)$/,
+                    (_, name) => `<span class="dropdown-service-name" title="${name}">(${name})</span>`
+                )
+
+                const colorMatch = item.style.borderLeft.match(/rgb\([^)]+\)|#[a-fA-F0-9]+/)
+                if (colorMatch) {
+                    const borderColor = item.style.borderLeft.match(/(rgb\([^)]+\)|#[a-fA-F0-9]+)/)
+                    if (borderColor) {
+                        dropdownButton.style.borderLeft = `4px solid ${borderColor[1]}`
+                        dropdownButton.style.backgroundColor = `${borderColor[1]}20` // 20% opacity
+                    }
+                } else {
+                    dropdownButton.style.borderLeft = ''
+                    dropdownButton.style.backgroundColor = ''
+                }
+
+                const dropdown = bootstrap.Dropdown.getInstance(dropdownButton)
+                if (dropdown) dropdown.hide()
+
+                select.dispatchEvent(new Event('change'))
+            }
+        }
+        dropdownMenu.addEventListener('click', this.dropdownClickHandler)
+
+        select.value = currentValue
+        if (currentValue) {
+            const matchingItem = dropdownMenu.querySelector(`a[data-value="${currentValue}"]`)
+            if (matchingItem) {
+                dropdownText.textContent = matchingItem.textContent.trim()
+                const borderColor = matchingItem.style.borderLeft.match(/(rgb\([^)]+\)|#[a-fA-F0-9]+)/)
+                if (borderColor) {
+                    dropdownButton.style.borderLeft = `4px solid ${borderColor[1]}`
+                    dropdownButton.style.backgroundColor = `${borderColor[1]}20`
+                }
+            }
+        }
+    }
+
+
+    getServiceBadge(ipport) {
+        if (!this.isLoaded) {
+            return `<span class="service-badge" style="background-color: #6c757d">Loading...</span>`
+        }
+        for (const [name, serviceData] of Object.entries(this.services)) {
+            const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+            if (ipports.includes(ipport)) {
+                const color = serviceData.color || '#007bff'
+                return `<span class="service-badge" style="background-color: ${color}">${name}</span>`
+            }
+        }
+        return `<span class="service-badge" style="background-color: #6c757d">Unknown</span>`
+    }
+
+    getServiceColor(ipport) {
+        if (!this.isLoaded) {
+            return '#6c757d'
+        }
+        for (const [name, serviceData] of Object.entries(this.services)) {
+            const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+            if (ipports.includes(ipport)) {
+                return serviceData.color || '#007bff'
+            }
+        }
+        return '#6c757d'
+    }
+
+    updateServicesList() {
+        const container = document.getElementById('servicesList')
+        if (!container) return
+
+        container.innerHTML = ''
+
+        if (Object.keys(this.services).length === 0) {
+            container.innerHTML = '<div class="text-center text-muted py-4"><em>No services configured yet</em></div>'
+            return
+        }
+
+        Object.entries(this.services).forEach(([name, serviceData]) => {
+            const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+            const color = serviceData.color || '#007bff'
+
+            const serviceDiv = document.createElement('div')
+            serviceDiv.className = 'card mb-2 border-0 shadow-sm'
+
+            serviceDiv.innerHTML = `
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1 me-3" style="min-width: 0;">
+                            <h6 class="card-title mb-2 d-flex align-items-center">
+                                <span class="badge me-2" style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%;"></span>
+                                <span class="service-name-badge" style="
+                                    display: inline-block;
+                                    vertical-align: middle;
+                                    max-width: 100%;
+                                    word-wrap: break-word;
+                                    border-radius: 8px;
+                                    padding: 4px 8px;
+                                    background-color: ${color};
+                                    font-weight: bold;
+                                ">${name}</span>
+                            </h6>
+                            <div class="small">
+                                ${ipports.map(ip => `
+                                    <span class="badge bg-light text-dark border me-1 mb-1" style="font-size: 0.75em;">
+                                        ${ip}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="btn-group-vertical">
+                            <button class="btn btn-success btn-sm edit-service-btn mb-1" data-service-name="${name}" title="Edit service">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-danger btn-sm delete-service-btn" data-service-name="${name}" title="Delete service">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16">
+                                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5.5"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `
+            container.appendChild(serviceDiv)
+        })
+    }
+
+    generateRandomColor() {
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+            '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+            '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA',
+            '#F1948A', '#85C1E9', '#F4D03F', '#AED6F1'
+        ]
+        return colors[Math.floor(Math.random() * colors.length)]
+    }
+
+
+    async editService(name) {
+        const addBtn = document.getElementById('addServiceBtn')
+        if (addBtn) {
+            addBtn.textContent = 'Confirm changes'
+            addBtn.classList.remove('btn-primary')
+            addBtn.classList.add('btn-success')
+        }
+
+        const serviceData = this.services[name]
+        const ipports = Array.isArray(serviceData) ? serviceData : serviceData.ipports
+        const color = serviceData.color || '#007bff'
+
+        document.getElementById('serviceName').value = name
+        document.getElementById('serviceColor').value = color
+
+        const port = ipports[0].split(':').pop()
+        document.getElementById('servicePorts').value = port
+    }
+
+    resetAddButton() {
+        const addBtn = document.getElementById('addServiceBtn')
+        if (addBtn) {
+            addBtn.textContent = 'Add Service'
+            addBtn.classList.remove('btn-success')
+            addBtn.classList.add('btn-primary')
+        }
+    }
+
+    // Transform Edit button to X button, to cancel editing
+    editBtnToX(button) {
+        this.currentEditButton = button;
+
+        button.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+            </svg>
+        `;
+
+        button.classList.remove('btn-success');
+        button.classList.add('btn-warning');
+        button.title = "Cancel editing";
+    }
+
+    // Reset the Edit button to its original state
+    restoreEditButton() {
+        if (this.currentEditButton) {
+            this.currentEditButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                </svg>
+            `;
+
+            this.currentEditButton.classList.remove('btn-warning');
+            this.currentEditButton.classList.add('btn-success');
+            this.currentEditButton.title = "Edit service";
+
+            this.currentEditButton = null;
+        }
+    }
+
+    // Cancel editing and reset the form
+    cancelEdit() {
+        document.getElementById('serviceName').value = '';
+        document.getElementById('servicePorts').value = '';
+        this.resetAddButton();
+        this.restoreEditButton();
+    }
+
+    // Restore the IP editing button to its original state
+    restoreIPinput() {
+        const editIpBtn = document.getElementById('editServiceIPBtn');
+        const ipInput = document.getElementById('serviceIP');
+        if (editIpBtn && ipInput) {
+            ipInput.setAttribute('readonly', '')
+            ipInput.value = this.originalIp
+            editIpBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                </svg>`
+            editIpBtn.classList.remove('btn-warning')
+            editIpBtn.classList.add('btn-success')
+            editIpBtn.title = 'Edit IP'
+        }
+    }
+
+    // Show a custom Toast message
+    showToast(message, type = 'success') {
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toastId = `toast-${Date.now()}`;
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+        toastEl.id = toastId;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+
+        toastContainer.appendChild(toastEl);
+
+        const toast = new bootstrap.Toast(toastEl, {
+            autohide: true,
+            delay: 3000
+        });
+        toast.show();
+
+        toastEl.addEventListener('hidden.bs.toast', () => {
+            toastEl.remove();
+        });
+    }
+}
+
+// Initialize the ServicesManager instance
+const servicesManager = new ServicesManager()
+window.servicesManager = servicesManager
+
+document.addEventListener('DOMContentLoaded', () => {
+    servicesManager.loadServices().then(() => {
+        // Ensure flow list updates after services are loaded
+        if (window.flowList) {
+            window.flowList.update()
+        }
+    })
+
+    const portInput = document.getElementById('servicePorts')
+    if (portInput) {
+        portInput.addEventListener('keydown', function (e) {
+            if (
+                !(
+                    (e.key >= '0' && e.key <= '9') ||
+                    ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)
+                )
+            ) {
+                e.preventDefault()
+            }
+        })
+        portInput.addEventListener('input', function (e) {
+            this.value = this.value.replace(/\D/g, '')
+        })
+    }
+
+    const editIpBtn = document.getElementById('editServiceIPBtn')
+    const ipInput = document.getElementById('serviceIP')
+    if (ipInput) {
+        ipInput.addEventListener('keydown', function (e) {
+            if (
+                !(
+                    (e.key >= '0' && e.key <= '9') ||
+                    e.key === '.' ||
+                    ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)
+                )
+            ) {
+                e.preventDefault()
+            }
+        })
+        ipInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9.]/g, '')
+            // Limit to 15 characters max for IP address
+            if (this.value.length > 15) {
+                this.value = this.value.substring(0, 15)
+            }
+        })
+    }
+
+    if (editIpBtn && ipInput) {
+        editIpBtn.addEventListener('click', () => {
+            if (ipInput.hasAttribute('readonly')) {
+                ipInput.removeAttribute('readonly')
+                ipInput.focus()
+
+                editIpBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                    </svg>`
+                editIpBtn.classList.remove('btn-success')
+                editIpBtn.classList.add('btn-warning')
+                editIpBtn.title = 'Cancel editing'
+            } else {
+                servicesManager.restoreIPinput()
+
+                // ipInput.setAttribute('readonly', '')
+                // ipInput.value = this.originalIp
+
+                // editIpBtn.innerHTML = `
+                //     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                //         <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                //     </svg>`
+                // editIpBtn.classList.remove('btn-warning')
+                // editIpBtn.classList.add('btn-success')
+                // editIpBtn.title = 'Edit IP'
+            }
+        })
+    }
+
+    const modal = document.getElementById('servicesModal')
+    if (modal) {
+        // Load services when the modal is shown
+        modal.addEventListener('show.bs.modal', () => {
+            const colorInput = document.getElementById('serviceColor');
+            if (colorInput) {
+                colorInput.value = servicesManager.generateRandomColor();
+            }
+            servicesManager.loadServices()
+        })
+
+        // Reset status when the modal is hidden
+        modal.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('serviceName').value = ''
+            document.getElementById('servicePorts').value = ''
+            servicesManager.resetAddButton()
+            servicesManager.restoreEditButton()
+            servicesManager.restoreIPinput()
+
+            servicesManager.loadServices().then(() => {
+                window.location.reload()
+            })
+        })
+
+        const saveRefreshRateBtn = document.getElementById('saveRefreshRateBtn')
+        if (saveRefreshRateBtn) {
+            saveRefreshRateBtn.addEventListener('click', async () => {
+                const refreshRateInput = document.getElementById('refreshRateInput')
+                const refreshRate = parseInt(refreshRateInput.value)
+
+                if (refreshRate < 1) {
+                    servicesManager.showToast('Refresh rate must be at least 1 second', 'danger')
+                    return
+                }
+
+                await servicesManager.saveRefreshRate(refreshRate)
+            })
+        }
+
+        const servicesModal = document.getElementById('servicesModal')
+        if (servicesModal) {
+            servicesModal.addEventListener('show.bs.modal', () => {
+                servicesManager.loadRefreshRate()
+            })
+        }
+
+        // Link the "Add Service" button to the addService method
+        const addButton = modal.querySelector('#addServiceBtn')
+        if (addButton) {
+            addButton.addEventListener('click', () => servicesManager.addService())
+        }
+
+        // Use the modal's form submit event to prevent default submission
+        const servicesList = document.getElementById('servicesList')
+        if (servicesList) {
+            servicesList.addEventListener('click', (e) => {
+                // Delete service
+                if (e.target.closest('.delete-service-btn')) {
+                    const serviceName = e.target.closest('.delete-service-btn').dataset.serviceName
+                    servicesManager.showDeleteConfirmModal(serviceName)
+                }
+
+                // Edit service
+                else if (e.target.closest('.edit-service-btn')) {
+                    const editBtn = e.target.closest('.edit-service-btn');
+                    const serviceName = editBtn.dataset.serviceName;
+
+                    // If the button is already in edit mode (has class 'btn-warning'), cancel the edit
+                    if (editBtn.classList.contains('btn-warning')) {
+                        servicesManager.cancelEdit();
+                    } else {
+                        servicesManager.editBtnToX(editBtn);
+                        servicesManager.editService(serviceName);
+                    }
+                }
+            })
+        }
+    }
+})
