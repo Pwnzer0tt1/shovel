@@ -1,14 +1,12 @@
-import { flowId } from "$lib/schema";
 import type { ParamMatcher } from "@sveltejs/kit";
 
 
 export const match = ((param: string) => {
-    try {
-        flowId.parse(BigInt(param));
-        // TODO: Check if flowId exists in the database
+    if (param.length > 0) {
+        // TODO: Check if service name exists
         return true;
     }
-    catch (e) {
+    else {
         return false;
     }
 }) satisfies ParamMatcher;

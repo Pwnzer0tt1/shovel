@@ -1,4 +1,7 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
+
+import type { ServicesConfig } from "$lib/schema";
+
 // for information about these interfaces
 declare global {
 	namespace App {
@@ -9,7 +12,7 @@ declare global {
 				tick_length: number,
 				refresh_rate: number,
 				default_ip: string,
-				services: any
+				services: ServicesConfig
 			}
 		}
 		// interface PageData {}
