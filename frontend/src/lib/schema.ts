@@ -10,6 +10,30 @@ export const getFlowList = z.object({
     tags_deny: z.array(z.string())
 });
 
+export type Flow = {
+    id: string,
+    ts_start: number,
+    ts_end: number,
+    dest_ipport: string,
+    app_proto: string,
+    tags: string,
+    metadata: {
+        flowints: {
+            [key: string]: number
+        },
+        flowvars: {
+            match: string
+        }[]
+    }
+};
+export type Flows = Flow[];
+
+export type Tag = {
+    tag: string,
+    color: string
+};
+export type Tags = Tag[];
+
 export const flowId = z.bigint();
 
 export const servicesConfig = z.map(
@@ -21,3 +45,11 @@ export const servicesConfig = z.map(
 );
 
 export type ServicesConfig = z.infer<typeof servicesConfig>;
+
+export type CtfConfig = {
+    start_date: string,
+	tick_length: number,
+	refresh_rate: number,
+	default_ip: string,
+	services: ServicesConfig
+};

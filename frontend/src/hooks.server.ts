@@ -7,7 +7,7 @@ let CTF_CONFIG = {
     tick_length: 120,
     refresh_rate: 120,
     default_ip: "",
-    services: {}
+    services: new Map()
 };
 
 

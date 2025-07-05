@@ -46,6 +46,7 @@
 	"dependencies": {
 		"@prisma/client": "^6.10.1",
 		"better-sqlite3": "^12.2.0",
+		"bootstrap": "^5.3.7",
 		"bootstrap-icons": "^1.13.1",
 		"dotenv": "^17.0.0",
 		"sqlite3": "^5.1.7"

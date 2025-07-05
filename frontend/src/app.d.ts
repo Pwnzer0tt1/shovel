@@ -1,19 +1,13 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 
-import type { ServicesConfig } from "$lib/schema";
+import type { CtfConfig } from "$lib/schema";
 
 // for information about these interfaces
 declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			ctfConfig: {
-				start_date: string,
-				tick_length: number,
-				refresh_rate: number,
-				default_ip: string,
-				services: ServicesConfig
-			}
+			ctfConfig: CtfConfig
 		}
 		// interface PageData {}
 		// interface PageState {}
