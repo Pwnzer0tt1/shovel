@@ -42,8 +42,11 @@ export const GET: RequestHandler = async ({ params, locals }) => {
         }
     }
 
+    result.flow.metadata = JSON.parse(result.flow.metadata);
+    result.flow.extra_data = JSON.parse(result.flow.extra_data);
+
     // Get associated alert
-    if (result.flow.alerted) {
+    if (result.flow.extra_data.alerted) {
         result.alert = betterEveDb.prepare("SELECT extra_data, color FROM alert WHERE flow_id = ? ORDER BY id").all(params.flow);
     }
 

@@ -16,9 +16,9 @@
 </script>
 
 <nav bind:clientHeight={sideBarHeight} class="vstack gap-2 h-100">
-    <button bind:clientHeight={autoUpdateBtnHeight} title="Refresh flow list" class="btn btn-success">Auto-Update: ON</button>
+    <button bind:clientHeight={autoUpdateBtnHeight} title="Refresh flow list" class="btn btn-success shadow-lg">Auto-Update: ON</button>
     <div bind:clientHeight={settingsHeight} class="hstack gap-2">
-        <select class="form-select">
+        <select class="form-select shadow-lg">
             <option value="" selected>All flows</option>
             <option value="!">Flows from unknown services</option>
             {#each Object.entries(ctfConfig.services) as [name, service]}
@@ -32,11 +32,11 @@
                 </optgroup>
             {/each}
         </select>
-        <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#servicesModal" title="Customize services" aria-label="Service settings">
+        <button class="btn btn-secondary shadow-lg" data-bs-toggle="modal" data-bs-target="#servicesModal" title="Customize services" aria-label="Service settings">
             <i class="bi bi-gear-fill"></i>
         </button>
         <div class="dropend">
-            <button class="btn btn-outline-secondary text-nowrap" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Dropdown filter">
+            <button class="btn btn-secondary shadow-lg text-nowrap" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Dropdown filter">
                 <i class="bi bi-funnel-fill"></i>
                 <i class="bi bi-chevron-right"></i>
             </button>
@@ -75,18 +75,18 @@
             </div>
         </div>
     </div>
-    <div class="card border-2" style="height: {flowsListHeight}px;">
+    <div class="card border-2 p-1 shadow-lg" style="height: {flowsListHeight}px;">
         {#if flows.length == 0}
-            <div class="d-flex justify-content-center" id="flow-list-loading-indicator">
+            <div class="d-flex justify-content-center">
                 <div class="spinner-border my-5" role="status">
                     <span class="visually-hidden">Loading…</span>
                 </div>
             </div>
         {:else}
             <div class="overflow-y-scroll">
-                <div class="list-group list-group-flush">
-                    {#each flows as f}
-                        <FlowCard flow={f} tags={tags} />
+                <div class="list-group list-group-flush m-1 rounded" style="scrollbar-">
+                    {#each Object.entries(flows) as [index, f]}
+                        <FlowCard index={Number(index)} flow={f} tags={tags} ctfConfig={ctfConfig} />
                     {/each}
                 </div>
             </div>

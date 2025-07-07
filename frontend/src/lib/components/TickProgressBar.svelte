@@ -45,7 +45,7 @@
     });
 </script>
 
-<nav class="card bg-body-tertiary border-2 p-2">
+<nav class="card bg-body-tertiary border-2 p-2 shadow-lg">
     <div class="row align-items-center">
         <div class="col-auto">
             <small class="fw-bold">{tickInfo}</small>
