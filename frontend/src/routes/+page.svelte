@@ -79,7 +79,7 @@
 
 <svelte:document onkeydown={flowsSelection} />
 
-<div class="vstack p-2">
+<div class="vstack p-2 overflow-y-hidden">
     <div class="hstack gap-2" style="height: {panelsHeight}px;">
         <div class="h-100">
             <!-- Side bar -->

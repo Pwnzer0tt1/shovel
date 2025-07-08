@@ -2,8 +2,11 @@
 	import type { CtfConfig, Flow } from "$lib/schema";
 	import { selectedFlow } from "$lib/state.svelte";
 	import { onMount } from "svelte";
+	import { includes } from "zod/v4";
     
     let { ctfConfig }: { ctfConfig: CtfConfig } = $props();
+
+    let appDataActiveView: "render" | "utf8" | "hex" = $state("render");
 
     const MAGIC_EXT = {
         'GIF image': 'gif',
@@ -42,6 +45,15 @@
         undefined // header name is missing
     ];
 
+    function getExtFromMagic(magic: string) {
+        for (const [magicPrefix, ext] of Object.entries(MAGIC_EXT)) {
+            if (magic.startsWith(magicPrefix)) {
+                return ext;
+            }
+        }
+        return "txt";
+    }
+
     let flowData = $derived.by(async () => {
         let res = await fetch(`/api/flow/${selectedFlow.flow?.id}`);
         let json = await res.json();
@@ -51,6 +63,32 @@
         const dateEnd = new Date(json.flow.ts_end / 1000).toISOString().split("T").join(", ");
         const start_ts = Math.floor(Date.parse(ctfConfig.start_date) / 1000);
         const tick = ((json.flow.ts_start / 1000000 - start_ts) / ctfConfig.tick_length).toFixed(3);
+
+        let fileinfos: any = {};
+        for (const [txId, data] of Object.entries(json[json.flow.app_proto])) {
+            console.log(data)
+            let appDataFileinfo: {
+                data: Blob,
+                ext: string
+            }[] = [];
+            if (json.fileinfo) {
+                let fileinfo = json.fileinfo.map((x: any) => JSON.parse(x.extra_data));
+                for (const d of Object.values(fileinfo)) {
+                    if (d.tx_id === Number(txId)) {
+                        let f = await fetch(`/filestore/${d.sha256.slice(0, 2)}/${d.sha256}`);
+                        let ext = getExtFromMagic(d.magic ?? "");
+                        let blob = await f.blob();
+                        appDataFileinfo.push({
+                            data: blob,
+                            ext
+                        });
+                    }
+                }
+            }
+            fileinfos[json.flow.app_proto] = appDataFileinfo;
+        }
+
+        console.log(fileinfos);
 
         return {
             dateStart,
@@ -68,9 +106,14 @@
             metadata: json.flow.metadata,
             alerts: json.alert,
             anomalies: json.anomaly,
-            flowAppProto: json[json.flow.app_proto]
+            flowAppProto: json[json.flow.app_proto],
+            fileinfos
         };
     });
+
+    function changeAppDataView(event: any) {
+        appDataActiveView = event.currentTarget.value;
+    }
 </script>
 
 {#await flowData}
@@ -123,25 +166,26 @@
                         <button class="accordion-button bg-body-tertiary text-body-emphasis" type="button" data-bs-toggle="collapse" data-bs-target="#display-app" aria-expanded="true" aria-controls="display-app">{flowData.appProto}</button>
                     </h2>
                     <div id="display-app" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">
-                        <div class="accordion-body">
-                            <div class="hstack border-bottom pb-3">
+                        <div class="accordion-body vstack gap-3">
+                            <div class="hstack">
                                 <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                                    <input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" checked>
-                                    <label class="btn btn-outline-primary" for="btnradio1">Render</label>
+                                    <input value="render" onchange={changeAppDataView} type="radio" class="btn-check" name="btnradio" id="app-data-btn-render" autocomplete="off" checked>
+                                    <label class="btn btn-outline-primary" for="app-data-btn-render">Render</label>
 
-                                    <input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off">
-                                    <label class="btn btn-outline-primary" for="btnradio2">UTF-8</label>
+                                    <input value="utf8" onchange={changeAppDataView} type="radio" class="btn-check" name="btnradio" id="app-data-btn-utf8" autocomplete="off">
+                                    <label class="btn btn-outline-primary" for="app-data-btn-utf8">UTF-8</label>
 
-                                    <input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off">
-                                    <label class="btn btn-outline-primary" for="btnradio3">Hex</label>
+                                    <input value="hex" onchange={changeAppDataView} type="radio" class="btn-check" name="btnradio" id="app-data-btn-hex" autocomplete="off">
+                                    <label class="btn btn-outline-primary" for="app-data-btn-hex">Hex</label>
                                 </div>
-                                <a class="ms-auto" href="#">Generate script</a>
+                                <a class="ms-auto" href="/">Generate script</a>
                             </div>
-                            <div class="my-3">
+                            <hr>
+                            <div>
                                 {#if flowData.appProto === "http" || flowData.appProto === "http2"}
                                     {#each flowData.flowAppProto as data}
-                                        {@const requestHeaders = data.request_headers.filter(x => !HTTP_HEADER_BL.includes(x.name.toLowerCase()))}
-                                        {@const responseHeaders = data.response_headers.filter(x => !HTTP_HEADER_BL.includes(x.name.toLowerCase()))}
+                                        {@const requestHeaders = data.request_headers.filter((x: any) => !HTTP_HEADER_BL.includes(x.name.toLowerCase()))}
+                                        {@const responseHeaders = data.response_headers.filter((x: any) => !HTTP_HEADER_BL.includes(x.name.toLowerCase()))}
                                         {#each requestHeaders as h}
                                             <p class="my-0">{h.name}: {h.value}</p>
                                         {/each}
@@ -150,7 +194,8 @@
                                         {/each}
                                     {/each}
                                 {/if}
-                                <br>
+                            </div>
+                            <div>
                                 {#each flowData.flowAppProto as data}
                                     {#if flowData.appProto === "http" || flowData.appProto === "http2"}
                                         <span class="fw-bold">{data.http_method ?? "?"} http://{data.hostname}:{data.http_port ?? flowData.dstPort}{data.url ?? ""} {data.protocol ?? ""}  <i class="bi bi-caret-left-fill"></i> {data.status ?? "?"}</span>
@@ -159,6 +204,36 @@
                                     {/if}
                                 {/each}
                             </div>
+                            <div class="vstack gap-5 mt-5">
+                                {#if appDataActiveView === "render"}
+                                    {#each Object.entries(flowData.fileinfos[flowData.appProto]) as [k, v]}
+                                        <div class="accordion" id="accordionExample">
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#app-render-{k}" aria-expanded="true" aria-controls="collapseOne">File </button>
+                                                </h2>
+                                                <div id="app-render-{k}" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">
+                                                    <div class="accordion-body">
+                                                        {#if ["gif", "jpg", "png", "svg"].includes(v.ext)}
+                                                            <img src={URL.createObjectURL(v.data)} alt="">
+                                                        {:else if v.ext === "pdf"}
+                                                            <iframe src={URL.createObjectURL(v.data)} frameborder="0"></iframe>
+                                                        {:else if v.ext === "html"}
+                                                            <iframe class="w-100" title="HTML renderer" src={URL.createObjectURL(v.data.slice(0, v.data.size, "text/html"))} frameborder="0"></iframe>
+                                                        {:else}
+                                                            {#await v.data.text() then t}
+                                                                <p class="text-break">{t}</p>
+                                                            {/await}
+                                                        {/if}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {/each}
+                                {:else if appDataActiveView === "utf8"}
+                                {:else if appDataActiveView === "hex"}
+                                {/if}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -166,8 +241,6 @@
         {/if}
         
         <!-- Raw data -->
-        <div class="row">
-            
-        </div>
+        
     </div>
 {/await}
