@@ -119,26 +119,20 @@
 {#await flowData}
     Loading...
 {:then flowData}
-    <div class="vstack gap-3">
+    <div class="vstack gap-3 pb-4">
         <!-- Flow card -->
-        <div class="row">
-            <div class="col-auto">
-                <div class="card p-2 border-secondary shadow-lg h-100">
-                    <p class="my-0">Tick {flowData.tick}</p>
-                    <p class="my-0">From {flowData.dateStart}</p>
-                    <p class="my-0">to {flowData.dateEnd}</p>
-                </div>
+        <div class="hstack gap-2 align-items-stretch">
+            <div class="card p-2 border-secondary shadow-lg">
+                <p class="my-0">Tick {flowData.tick}</p>
+                <p class="my-0">From {flowData.dateStart}</p>
+                <p class="my-0">to {flowData.dateEnd}</p>
             </div>
-            <div class="col">
-                <div class="card p-2 border-secondary shadow-lg">
-                    <p class="my-0">{flowData.proto} flow from {flowData.srcIpPort} to {flowData.dstIpPort}</p>
-                    <p class="my-0"><i class="bi bi-arrow-right"></i> {flowData.pktsToServer} packets ({flowData.bytesToServer} bytes)</p>
-                    <p class="my-0"><i class="bi bi-arrow-left"></i> {flowData.pktsToClient} packets ({flowData.bytesToClient} bytes)</p>
-                </div>
+            <div class="flex-grow-1 card p-2 border-secondary shadow-lg">
+                <p class="my-0">{flowData.proto} flow from {flowData.srcIpPort} to {flowData.dstIpPort}</p>
+                <p class="my-0"><i class="bi bi-arrow-right"></i> {flowData.pktsToServer} packets ({flowData.bytesToServer} bytes)</p>
+                <p class="my-0"><i class="bi bi-arrow-left"></i> {flowData.pktsToClient} packets ({flowData.bytesToClient} bytes)</p>
             </div>
-            <div class="col-auto">
-                <button class="btn btn-success shadow-lg h-100" aria-label="Download pcap"><i class="bi bi-file-earmark-arrow-down-fill"></i></button>
-            </div>
+            <button class="btn btn-success shadow-lg" aria-label="Download pcap"><i class="bi bi-file-earmark-arrow-down-fill"></i></button>
         </div>
 
         <!-- Alerts -->
@@ -204,7 +198,7 @@
                                     {/if}
                                 {/each}
                             </div>
-                            <div class="vstack gap-5 mt-5">
+                            <div class="vstack gap-5">
                                 {#if appDataActiveView === "render"}
                                     {#each Object.entries(flowData.fileinfos[flowData.appProto]) as [k, v]}
                                         <div class="accordion" id="accordionExample">

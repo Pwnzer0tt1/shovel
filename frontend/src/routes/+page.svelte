@@ -79,13 +79,13 @@
 
 <svelte:document onkeydown={flowsSelection} />
 
-<div class="vstack p-2 overflow-y-hidden">
+<div class="vstack p-2 vh-100">
     <div class="hstack gap-2" style="height: {panelsHeight}px;">
-        <div class="h-100">
+        <div class=""  style="height: {panelsHeight}px;">
             <!-- Side bar -->
             <SideBar ctfConfig={data.ctfConfig} flows={flows} tags={tags} tickProgressBarHeight={tickProgressBarHeight} />
         </div>
-        <div class="container mb-auto">
+        <div class="col-9 h-100 pe-2 overflow-auto">
             {#if selectedFlow.flow}
                 <!-- Flow display -->
                 <FlowDisplay ctfConfig={data.ctfConfig} />

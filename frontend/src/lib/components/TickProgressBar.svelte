@@ -45,18 +45,14 @@
     });
 </script>
 
-<nav class="card bg-body-tertiary border-2 p-2 shadow-lg">
-    <div class="row align-items-center">
-        <div class="col-auto">
-            <small class="fw-bold">{tickInfo}</small>
-        </div>
-        <div class="col">
+<div class="card bg-body-tertiary border-2 p-2 shadow-lg">
+    <div class="hstack w-100 justify-content-evenly">
+        <small class="fw-bold">{tickInfo}</small>
+        <div class="col-10">
             <div class="progress" role="progressbar" aria-label="Tick progress bar" aria-valuenow={progressBarValue} aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
                 <div class="progress-bar bg-{progressBarColor} progress-bar-striped progress-bar-animated" style="width: {progressBarValue}%"></div>
             </div>
         </div>
-        <div class="col-auto">
-            <small>{tickTimer}</small>
-        </div>
+        <small>{tickTimer}</small>
     </div>
-</nav>
+</div>

@@ -1,4 +1,4 @@
-<div class="my-auto text-center">
+<div class="mt-5 text-center">
     <img src="/favicon.svg" alt="" width="80">
     <p class="fs-1 fw-light">Shovel</p>
     <ul class="list-unstyled">

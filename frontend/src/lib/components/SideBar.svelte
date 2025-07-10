@@ -9,13 +9,16 @@
         tickProgressBarHeight: number
     } = $props();
 
+    let innerHeight = $state(0);
     let sideBarHeight = $state(0);
     let autoUpdateBtnHeight = $state(0);
     let settingsHeight = $state(0);
     let flowsListHeight = $derived(sideBarHeight - autoUpdateBtnHeight - settingsHeight - tickProgressBarHeight)
 </script>
 
-<nav bind:clientHeight={sideBarHeight} class="vstack gap-2 h-100">
+<svelte:window bind:innerHeight />
+
+<div bind:clientHeight={sideBarHeight} class="vstack gap-2 h-100">
     <button bind:clientHeight={autoUpdateBtnHeight} title="Refresh flow list" class="btn btn-success shadow-lg">Auto-Update: ON</button>
     <div bind:clientHeight={settingsHeight} class="hstack gap-2">
         <select class="form-select shadow-lg">
@@ -92,4 +95,4 @@
             </div>
         {/if}
     </div>
-</nav>
+</div>
