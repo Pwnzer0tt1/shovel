@@ -13,7 +13,7 @@
     let sideBarHeight = $state(0);
     let autoUpdateBtnHeight = $state(0);
     let settingsHeight = $state(0);
-    let flowsListHeight = $derived(sideBarHeight - autoUpdateBtnHeight - settingsHeight - tickProgressBarHeight)
+    let flowsListHeight = $derived(sideBarHeight - autoUpdateBtnHeight - settingsHeight)
 </script>
 
 <svelte:window bind:innerHeight />
@@ -87,7 +87,7 @@
             </div>
         {:else}
             <div class="overflow-y-scroll">
-                <div class="list-group list-group-flush m-1 rounded" style="scrollbar-">
+                <div class="list-group list-group-flush m-1 rounded">
                     {#each Object.entries(flows) as [index, f]}
                         <FlowCard index={Number(index)} flow={f} tags={tags} ctfConfig={ctfConfig} />
                     {/each}

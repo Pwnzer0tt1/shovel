@@ -119,7 +119,7 @@
 {#await flowData}
     Loading...
 {:then flowData}
-    <div class="vstack gap-3 pb-4">
+    <div class="vstack gap-3">
         <!-- Flow card -->
         <div class="hstack gap-2 align-items-stretch">
             <div class="card p-2 border-secondary shadow-lg">
@@ -136,21 +136,25 @@
         </div>
 
         <!-- Alerts -->
-        <div class="vstack gap-3">
-            {#each flowData.alerts as a}
-                {@const alert = JSON.parse(a.extra_data)}
-                {#if alert.signature !== "tag"}
-                    <div class="card p-2 border-{a.color} shadow-lg">{alert.signature}</div>
-                {/if}
-            {/each}
-        </div>
+        {#if flowData.alerts.length > 0}
+            <div class="vstack gap-3">
+                {#each flowData.alerts as a}
+                    {@const alert = JSON.parse(a.extra_data)}
+                    {#if alert.signature !== "tag"}
+                        <div class="card p-2 border-{a.color} shadow-lg">{alert.signature}</div>
+                    {/if}
+                {/each}
+            </div>
+        {/if}
 
         <!-- Anomalies -->
-        <div class="vstack gap-3">
-            {#each flowData.anomalies as anomaly}
-                <div class="card p-2 border-warning shadow-lg">Dissection anomaly: {JSON.stringify(anomaly)}</div>
-            {/each}
-        </div>
+        {#if flowData.anomalies.length > 0}
+            <div class="vstack gap-3">
+                {#each flowData.anomalies as anomaly}
+                    <div class="card p-2 border-warning shadow-lg">Dissection anomaly: {JSON.stringify(anomaly)}</div>
+                {/each}
+            </div>
+        {/if}
 
         <!-- App data -->
         {#if flowData.appProto && flowData.appProto !== "failed"}
@@ -201,12 +205,12 @@
                             <div class="vstack gap-5">
                                 {#if appDataActiveView === "render"}
                                     {#each Object.entries(flowData.fileinfos[flowData.appProto]) as [k, v]}
-                                        <div class="accordion" id="accordionExample">
+                                        <div class="accordion" id="accordion-app-render-{k}">
                                             <div class="accordion-item">
                                                 <h2 class="accordion-header">
                                                     <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#app-render-{k}" aria-expanded="true" aria-controls="collapseOne">File </button>
                                                 </h2>
-                                                <div id="app-render-{k}" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">
+                                                <div id="app-render-{k}" class="accordion-collapse collapse show" data-bs-parent="#accordion-app-render-{k}">
                                                     <div class="accordion-body">
                                                         {#if ["gif", "jpg", "png", "svg"].includes(v.ext)}
                                                             <img src={URL.createObjectURL(v.data)} alt="">

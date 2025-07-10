@@ -79,13 +79,13 @@
 
 <svelte:document onkeydown={flowsSelection} />
 
-<div class="vstack p-2 vh-100">
-    <div class="hstack gap-2" style="height: {panelsHeight}px;">
-        <div class=""  style="height: {panelsHeight}px;">
+<div class="vstack vh-100 p-2">
+    <div class="hstack gap-2 pb-2" style="height: {panelsHeight}px;">
+        <div class="pb-3 h-100">
             <!-- Side bar -->
             <SideBar ctfConfig={data.ctfConfig} flows={flows} tags={tags} tickProgressBarHeight={tickProgressBarHeight} />
         </div>
-        <div class="col-9 h-100 pe-2 overflow-auto">
+        <div class="col-9 h-100 overflow-y-scroll pe-2">
             {#if selectedFlow.flow}
                 <!-- Flow display -->
                 <FlowDisplay ctfConfig={data.ctfConfig} />
@@ -95,11 +95,12 @@
             {/if}
         </div>
     </div>
-    <div class="fixed-bottom m-2" bind:clientHeight={tickProgressBarHeight}>
+    <div class="fixed-bottom p-2" bind:clientHeight={tickProgressBarHeight}>
         <!-- Progress bar per tick -->
         <TickProgressBar startTs={Math.floor(Date.parse(data.ctfConfig.start_date) / 1000)} tickLength={data.ctfConfig.tick_length} />
     </div>
 </div>
+
 
 <!-- Modal to manage services -->
 <div class="modal fade" id="servicesModal" tabindex="-1">
