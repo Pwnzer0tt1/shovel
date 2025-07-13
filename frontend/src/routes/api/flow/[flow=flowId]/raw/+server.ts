@@ -13,7 +13,7 @@ export const GET: RequestHandler = ({ params, locals }) => {
     for (const r of rows) {
         result.push({
             server_to_client: r.server_to_client.toString(),
-            data: Buffer.from(r.blob, "base64").toString("utf-8")
+            data: Buffer.from(r.blob).toString("base64")
         });
     }
     

@@ -2,12 +2,13 @@
 	import type { CtfConfig, Flow } from "$lib/schema";
 	import { selectedFlow } from "$lib/state.svelte";
 	import { onMount } from "svelte";
-	import { includes } from "zod/v4";
 	import TextViewer from "./TextViewer.svelte";
+	import type { L } from "ace-builds-internal/lib/bidiutil";
     
     let { ctfConfig }: { ctfConfig: CtfConfig } = $props();
 
     let appDataActiveView: "render" | "utf8" | "hex" = $state("render");
+    let rawDataActiveView: "utf8" | "hex" = $state("utf8");
 
     const MAGIC_EXT = {
         'GIF image': 'gif',
@@ -98,6 +99,16 @@
         return hexdump;
     }
 
+    let rawFlowData = $derived.by(async () => {
+        let res = await fetch(`/api/flow/${selectedFlow.flow?.id}/raw`);
+        let json = await res.json();
+        console.log(json);
+
+        return {
+            raw: json
+        }
+    });
+
     let flowData = $derived.by(async () => {
         let res = await fetch(`/api/flow/${selectedFlow.flow?.id}`);
         let json = await res.json();
@@ -109,36 +120,38 @@
         const tick = ((json.flow.ts_start / 1000000 - start_ts) / ctfConfig.tick_length).toFixed(3);
 
         let fileinfos: any = {};
-        for (const [txId, data] of Object.entries(json[json.flow.app_proto])) {
-            console.log(data)
-            let appDataFileinfo: {
-                data: Blob,
-                ext: string,
-                filename: string,
-                filestore: string,
-                magic: string,
-                bytes: Uint8Array
-            }[] = [];
-            if (json.fileinfo) {
-                let fileinfo = json.fileinfo.map((x: any) => JSON.parse(x.extra_data));
-                for (const d of Object.values(fileinfo)) {
-                    if (d.tx_id === Number(txId)) {
-                        let f = await fetch(`/filestore/${d.sha256.slice(0, 2)}/${d.sha256}`);
-                        let ext = getExtFromMagic(d.magic ?? "");
-                        let blob = await f.clone().blob();
-                        let bytes = await f.bytes();
-                        appDataFileinfo.push({
-                            data: blob,
-                            ext,
-                            filename: d.filename,
-                            filestore: `/filestore/${d.sha256.slice(0, 2)}/${d.sha256}`,
-                            magic: d.magic ?? "",
-                            bytes
-                        });
+        if (json.flow.app_proto !== "failed") {
+            for (const [txId, data] of Object.entries(json[json.flow.app_proto])) {
+                console.log(data)
+                let appDataFileinfo: {
+                    data: Blob,
+                    ext: string,
+                    filename: string,
+                    filestore: string,
+                    magic: string,
+                    bytes: Uint8Array
+                }[] = [];
+                if (json.fileinfo) {
+                    let fileinfo = json.fileinfo.map((x: any) => JSON.parse(x.extra_data));
+                    for (const d of Object.values(fileinfo)) {
+                        if (d.tx_id === Number(txId)) {
+                            let f = await fetch(`/filestore/${d.sha256.slice(0, 2)}/${d.sha256}`);
+                            let ext = getExtFromMagic(d.magic ?? "");
+                            let blob = await f.clone().blob();
+                            let bytes = await f.bytes();
+                            appDataFileinfo.push({
+                                data: blob,
+                                ext,
+                                filename: d.filename,
+                                filestore: `/filestore/${d.sha256.slice(0, 2)}/${d.sha256}`,
+                                magic: d.magic ?? "",
+                                bytes
+                            });
+                        }
                     }
                 }
+                fileinfos[json.flow.app_proto] = appDataFileinfo;
             }
-            fileinfos[json.flow.app_proto] = appDataFileinfo;
         }
 
         console.log(fileinfos);
@@ -149,6 +162,7 @@
             tick,
             proto: json.flow.proto,
             appProto: json.flow.app_proto,
+            flowEstablished: json.flow.state !== "new",
             srcIpPort: json.flow.src_ipport,
             dstPort: json.flow.dest_port,
             dstIpPort: json.flow.dest_ipport,
@@ -168,6 +182,10 @@
         appDataActiveView = event.currentTarget.value;
     }
 
+    function changeRawDataView(event: any) {
+        rawDataActiveView = event.currentTarget.value;
+    }
+
     let editorEl: HTMLDivElement | null = $state(null);
     let editor: any;
     $effect(() => {
@@ -180,7 +198,11 @@
         }
     });
 
+    let tooltipTriggerList;
+    let tooltipList;
     onMount(() => {
+        tooltipTriggerList = document.querySelectorAll("[data-bs-toggle=\"tooltip\"]");
+        tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     });
 </script>
 
@@ -226,22 +248,22 @@
 
         <!-- App data -->
         {#if flowData.appProto && flowData.appProto !== "failed"}
-            <div class="accordion">
+            <div class="accordion" id="accordion-app">
                 <div class="accordion-item border-success shadow-lg">
                     <h2 class="accordion-header">
                         <button class="accordion-button bg-body-tertiary text-body-emphasis" type="button" data-bs-toggle="collapse" data-bs-target="#display-app" aria-expanded="true" aria-controls="display-app">{flowData.appProto}</button>
                     </h2>
-                    <div id="display-app" class="accordion-collapse collapse show" data-bs-parent="#accordionExample">
+                    <div id="display-app" class="accordion-collapse collapse show" data-bs-parent="#accordion-app">
                         <div class="accordion-body vstack gap-3">
                             <div class="hstack">
                                 <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                                    <input value="render" onchange={changeAppDataView} type="radio" class="btn-check" name="btnradio" id="app-data-btn-render" autocomplete="off" checked>
+                                    <input value="render" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-render" autocomplete="off" checked>
                                     <label class="btn btn-outline-primary" for="app-data-btn-render">Render</label>
 
-                                    <input value="utf8" onchange={changeAppDataView} type="radio" class="btn-check" name="btnradio" id="app-data-btn-utf8" autocomplete="off">
+                                    <input value="utf8" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-utf8" autocomplete="off">
                                     <label class="btn btn-outline-primary" for="app-data-btn-utf8">UTF-8</label>
 
-                                    <input value="hex" onchange={changeAppDataView} type="radio" class="btn-check" name="btnradio" id="app-data-btn-hex" autocomplete="off">
+                                    <input value="hex" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-hex" autocomplete="off">
                                     <label class="btn btn-outline-primary" for="app-data-btn-hex">Hex</label>
                                 </div>
                                 <a class="ms-auto" href="/">Generate script</a>
@@ -316,6 +338,43 @@
         {/if}
         
         <!-- Raw data -->
-        
+        {#await rawFlowData}
+            Loading...
+        {:then rawFlowData}
+            {#if ["TCP", "UDP"].includes(flowData.proto) && flowData.flowEstablished}
+                <div class="accordion" id="accordion-raw">
+                    <div class="accordion-item border-primary shadow-lg">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button bg-body-tertiary text-body-emphasis" type="button" data-bs-toggle="collapse" data-bs-target="#display-raw" aria-expanded="true" aria-controls="display-raw">Raw data</button>
+                        </h2>
+                        <div id="display-raw" class="accordion-collapse collapse show" data-bs-parent="#accordion-raw">
+                            <div class="accordion-body vstack gap-3">
+                                <div class="hstack">
+                                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                                        <input value="utf8" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" id="raw-data-btn-utf8" autocomplete="off" checked>
+                                        <label class="btn btn-outline-primary" for="raw-data-btn-utf8">UTF-8</label>
+
+                                        <input value="hex" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" id="raw-data-btn-hex" autocomplete="off">
+                                        <label class="btn btn-outline-primary" for="raw-data-btn-hex">Hex</label>
+                                    </div>
+                                    <a class="ms-auto" href="/">Generate script</a>
+                                </div>
+                                <hr>
+                                <div class="vstack gap-3 mt-3">
+                                    {#each rawFlowData.raw as chunk}
+                                        {@const byteArray = Uint8Array.from(atob(chunk.data), c => c.charCodeAt(0))}
+                                        {#if rawDataActiveView === "utf8"}
+                                            <pre class="p-2 {chunk.server_to_client === "0" ? "bg-danger" : ""}{chunk.server_to_client === "1" ? "bg-success" : ""}">{new TextDecoder().decode(byteArray)}</pre>
+                                        {:else if rawDataActiveView === "hex"}
+                                            <pre class="p-2 {chunk.server_to_client === "0" ? "bg-danger" : ""}{chunk.server_to_client === "1" ? "bg-success" : ""}">{hexdump(byteArray)}</pre>
+                                        {/if}
+                                    {/each}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+        {/await}
     </div>
 {/await}
