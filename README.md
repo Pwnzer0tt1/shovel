@@ -17,9 +17,9 @@ Shovel is developed in the context of
 
 You might also want to have a look at these other awesome traffic analyser tools:
 
-- https://github.com/secgroup/flower (first commit in 2018)
-- https://github.com/eciavatta/caronte (first commit in 2020)
-- https://github.com/OpenAttackDefenseTools/tulip (fork from flower in May 2022)
+- <https://github.com/secgroup/flower> (first commit in 2018)
+- <https://github.com/eciavatta/caronte> (first commit in 2020)
+- <https://github.com/OpenAttackDefenseTools/tulip> (fork from flower in May 2022)
 
 Compared to these traffic analyser tools, Shovel only relies on Suricata while
 making opinionated choices for the frontend. This has a few nice implications:
@@ -93,6 +93,7 @@ application using the two following commands:
 > [!TIP]
 > For a Microsoft Windows system, you may capture network traffic using the
 > following command (3389 is RDP) inside a PowerShell console:
+>
 > ```powershell
 > &'C:\Program Files\Wireshark\tshark.exe' -i game -w Z:\ -f "tcp port not 3389" -b duration:60
 > ```
@@ -152,35 +153,136 @@ PCAP_OVER_IP=pcap-broker:4242 ./suricata/entrypoint.sh -r /dev/stdin
 
 ### Starting Shovel
 
-To start Shovel more easily, you can use the `./start.py` script to start the containers. Let's see in detail.
+Shovel provides a convenient `./start.py` script to manage containers and configuration. The script supports multiple commands with a user-friendly interface.
 
-Use the flag `--build` (or `-b`) to start the containers. In addition, add one of the following to specify the capture
-mode:
+If you run `./start.py` without arguments, it will enter interactive mode where you can select actions and configure parameters through guided prompts.
 
-- `--mode-a` - **Mode A**, for pcap replay mode.
-- `--mode-b` - **Mode B**, for live capture interface mode.
-- `--mode-c` - **Mode C**, for live capture using PCAP-over-IP (default, if not specified).
+Here you can find a list of available commands to use with `./start.py`:
+
+- **`start`** - Build and start containers
+- **`stop`** - Stop running containers
+- **`clear`** - Clear data (Suricata output, config files, PCAP files) and stop containers
+- **`status`** - Show container status
+- **`logs`** - Follow container logs
+- **`help`** - Show help information
+
+#### Launching Shovel
+
+To start Shovel, use the `start` command with one of the following capture modes:
+
+- `--mode-a` - **Mode A**, for pcap replay mode
+- `--mode-b` - **Mode B**, for live capture interface mode  
+- `--mode-c` - **Mode C**, for live capture using PCAP-over-IP (default if not specified)
 
 ---
 
-If **Mode C** is used, you can customize the `.env` file with:
+When using **Mode C**, you can specify additional parameters:
 
-- `--target-ip TARGET_IP` (or `-ip`): specify the IP address of the vulnbox from which to capture traffic (MANDATORY).
-- `--date START_DATE`: add the start date of the competition, using the ISO format (i.e.,
-  `YYYY-MM-DDThh:mm+ZZ:zz`). If the timezone is not specified, it will default to UTC+02:00 (CEST).
+- **`--target-ip TARGET_IP`** (or `-ip`): IP address of the vulnbox (MANDATORY for Mode C)
+- **`--date START_DATE`**: CTF start date in ISO format `YYYY-MM-DDThh:mm+ZZ:zz`
+- **`--tick-length LENGTH`** (or `-t`): Tick length in seconds (default: 120)
+- **`--refresh-rate RATE`** (or `-r`): Auto-refresh rate in seconds (default: 30)
+- **`--key ALGORITHM`** (or `-k`): SSH key algorithm for connection (default: ed25519)
 
----
-
-To stop Shovel containers, just run:
+Here you can find an example with the full configuration:
 
 ```bash
-./start.py --down
+./start.py start --mode-c \
+  --target-ip 10.60.0.1 \
+  --date "1970-01-01T10:00+02:00" \
+  --tick-length 120 \
+  --refresh-rate 30 \
+  --key ed25519
+```
+
+#### Build and Clean Options
+
+- `--no-build`: Skip building Docker images (use existing images)
+- `--no-clean`: Skip cleaning environment (keep existing data)
+
+#### Stopping Shovel
+
+To stop running containers:
+
+```bash
+./start.py stop
+```
+
+#### Managing Data
+
+The **`clear`** command provides granular control over data cleanup. You can use the interactive clear by running:
+
+```bash
+./start.py clear
+```
+
+Alternatively, you can specify what to clean:
+
+```bash
+./start.py clear --config         # (or -c): Clear .env and services_config.json
+./start.py clear --suricata       # (or -s): Clear Suricata output and stop containers
+./start.py clear --pcap           # (or -p): Clear PCAP files
+```
+
+To rapidly delete everything listed above you can use the flag `--all` (or `-A`).
+
+To avoid the cleanup, you can add the flag `--no-clean` to the startup command.
+
+#### Monitoring
+
+Check container status:
+
+```bash
+./start.py status
+```
+
+Follow container logs:
+
+```bash
+# Follow all container logs
+./start.py logs
+
+# Follow logs with tail limit
+./start.py logs --tail 100
+
+# Follow specific service logs
+./start.py logs webapp --tail 50
+```
+
+#### Quick Reference
+
+For a complete list of commands and options, run:
+
+```bash
+./start.py help
+```
+
+Common command examples:
+
+```bash
+# Quick start Mode C with target IP
+./start.py start --mode-c --target-ip 10.60.2.1
+
+# Start without rebuilding images
+./start.py start --mode-c --no-build
+
+# Start preserving existing data
+./start.py start --mode-c --no-clean
+
+# Stop everything
+./start.py stop
+
+# Clean everything and stop
+./start.py clear --all
+
+# Monitor containers
+./start.py status
+./start.py logs
 ```
 
 ### Customizing services
 
-To setup the services mapping, you can edit the `.env` file by hand. In alternative, once Shovel is started you can
-customize the configuration directly from the web interface.
+To setup the services mapping, you can edit the `.env` file by hand. In alternative, once Shovel is started you can customize the configuration directly from the web interface.
 
 Click on the settings icon in the top left corner to open the **Service Manager** modal. Here you can add:
 
@@ -191,16 +293,21 @@ Click on the settings icon in the top left corner to open the **Service Manager*
 After adding a service, you can also edit it by clicking on the pencil icon next to the service name.
 
 > [!WARNING]
-> Note that if Shovel is stopped and restarted with `--build`, the configuration in web interface will be
-> lost.
+> Note that if Shovel is restarted without the `--no-clean` flag, the configuration in the web interface will be lost. Use `./start.py start --no-clean` to preserve existing configuration.
 
 ### Auto Refresh
 
-It has been implemented an auto-refresh feature that allows to automatically refresh the flow list with an interval
-equal to the `tickLength` specified in the `.env` file.
-After updating, the interface will scroll to the previously selected flow (if any).
+Shovel includes an auto-refresh feature that automatically refreshes the flow list with an interval specified by the `REFRESH_RATE` parameter in the `.env` file. After updating, the interface will scroll to the previously selected flow (if any).
 
-It is possible to temporarily disable the auto-refresh by clicking on the Auto-Update button in the top left corner.
+The default value of `REFRESH_RATE` can be set during Shovel startup using the `--refresh-rate` parameter:
+
+```bash
+./start.py start --refresh-rate 60
+```
+
+You can also update this value at runtime from the **Service Manager** in the web interface. The new value will be saved locally in the user's browser to not interfere with other users.
+
+The auto-refresh feature can be toggled by clicking the **Auto-Update** button in the top left corner of the web interface.
 
 ## FAQs
 
@@ -225,20 +332,26 @@ Using this method, Shovel can run on another machine in live capture mode.
 To achieve traffic mirroring, you may use these steps as reference:
 
 1. Enable SSH tunneling in vulnbox OpenSSH server:
-   ```
+
+   ```bash
    echo -e 'PermitTunnel yes' | sudo tee -a /etc/ssh/sshd_config
    systemctl restart ssh
    ```
+
 2. Create `tun5` tunnel from the local machine to the vulnbox and up `tun5` on vulnbox:
-   ```
+
+   ```bash
    sudo ip tuntap add tun5 mode tun user $USER
    ssh -w 5:5 root@10.20.9.6 ip link set tun5 up
    ```
+
 3. Up `tun5` on the local machine and start `tcpdump` to create pcap files:
-   ```
+
+   ```bash
    sudo ip link set tun5 up
    sudo tcpdump -n -i tun5 -G 30 -Z root -w trace-%Y-%m-%d_%H-%M-%S.pcap
    ```
+
 4. Mirror `game` traffic to `tun5` on the vulnbox.
    This can be done using Nftables netdev `dup` option on `ingress` and `egress`.
 
