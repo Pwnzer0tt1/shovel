@@ -34,7 +34,7 @@ def print_banner():
     terminal_width = shutil.get_terminal_size().columns
     banner = """
 ╔═══════════════════════════════════════════════════════════════╗
-║                       SHOVEL - SURICATA                       ║
+║                            DIGGER                             ║
 ║           CTF Traffic Analysis Tool - by Pwnzer0tt1           ║
 ╚═══════════════════════════════════════════════════════════════╝
     """
@@ -115,7 +115,7 @@ def prompt_for_mode():
     print(f"{Colors.BOLD}{Colors.CYAN}Mode Selection{Colors.END}".center(OFFSET_PRINT + 12))
     print_separator()
 
-    print_info("Choose a mode to start Shovel:")
+    print_info("Choose a mode to start Digger:")
     print(f"  {Colors.CYAN}A{Colors.END} - PCAP replay mode")
     print(f"  {Colors.CYAN}B{Colors.END} - Capture interface mode")
     print(f"  {Colors.CYAN}C{Colors.END} - PCAP-over-IP mode")
@@ -435,7 +435,7 @@ def get_compose_file_for_mode(mode):
 
 def handle_start_command(args):
     """Handle the start command"""
-    print_progress("Starting Shovel...\n")
+    print_progress("Starting Digger...\n")
 
     # Determine mode
     if args.mode_a:
@@ -555,14 +555,14 @@ def handle_start_command(args):
     compose_up(compose_file, not args.no_build)
 
     print_separator(char="═")
-    print_success(f"Shovel successfully started in mode {mode}!")
+    print_success(f"Digger successfully started in mode {mode}!")
     print(f"  {Colors.BOLD}Web interface:{Colors.END} {Colors.CYAN}http://127.0.0.1:8000{Colors.END}")
     print_separator(char="═")
 
 
 def handle_stop_command():
     """Handle the stop command"""
-    print_progress("Stopping Shovel...")
+    print_progress("Stopping Digger...")
 
     # Check if .env exists to determine which compose file to use
     if os.path.exists(ENV_FILE):
@@ -702,7 +702,7 @@ def clear_config_files():
 
 def handle_status_command():
     """Handle the status command - show container status"""
-    print_progress("Checking Shovel status...")
+    print_progress("Checking Digger status...")
 
     # Check if .env exists to provide context
     if not os.path.exists(ENV_FILE):
@@ -771,12 +771,12 @@ def handle_help_command():
 def create_parser():
     """Create and configure the argument parser"""
     parser = argparse.ArgumentParser(
-        description="Shovel - CTF Traffic Analysis Tool",
+        description="Digger - CTF Traffic Analysis Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=False,  # Disable default -h/--help
         epilog=f"""
 {Colors.BOLD}Examples:{Colors.END}
-  {Colors.CYAN}./start.py start --mode-a{Colors.END}                         # Start Shovel in mode A
+  {Colors.CYAN}./start.py start --mode-a{Colors.END}                         # Start Digger in mode A
   {Colors.CYAN}./start.py start --mode-c --target-ip 10.60.2.1 {Colors.END}  # Start mode C with target IP
   {Colors.CYAN}./start.py stop{Colors.END}                                   # Stop running containers
   {Colors.CYAN}./start.py clear{Colors.END}                                  # Clear output and stop containers
@@ -797,7 +797,7 @@ def create_parser():
     subparsers.add_parser("help", help="Show help information")
 
     # Start command
-    parser_start = subparsers.add_parser("start", help="Start Shovel")
+    parser_start = subparsers.add_parser("start", help="Start Digger")
     mode_group = parser_start.add_mutually_exclusive_group()
     mode_group.add_argument("--mode-a", action="store_true", help="Start in mode A (pcap replay)")
     mode_group.add_argument("--mode-b", action="store_true", help="Start in mode B (capture interface)")
@@ -815,7 +815,7 @@ def create_parser():
                               help="Specify algorithm for SSH key exchange (default: ed25519)")
 
     # Stop command
-    subparsers.add_parser("stop", help="Stop Shovel containers")
+    subparsers.add_parser("stop", help="Stop Digger containers")
 
     # Clear command
     parser_clear = subparsers.add_parser("clear", help="Clean Suricata output and stop containers")

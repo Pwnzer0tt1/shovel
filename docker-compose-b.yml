@@ -17,14 +17,13 @@ services:
       - NET_ADMIN
     network_mode: "host"
 
-  webapp:
-    build: ./webapp
-    image: anssi/shovel-webapp:dev
+  frontend:
+    build: ./frontend
     restart: always
     volumes:
       - "./input_pcaps:/input_pcaps:ro" # remove to prevent users from downloading pcaps
       - "./suricata/output:/suricata/output:rw"
     ports:
-      - 127.0.0.1:8000:8000
+      - 127.0.0.1:3000:3000
     env_file:
       - .env
