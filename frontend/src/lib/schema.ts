@@ -1,14 +1,16 @@
 import { z } from "zod/v4";
 
 
-export const getFlowList = z.object({
-    ts_to: z.int(),
-    services: z.array(z.string()),
-    app_proto: z.string(),
-    search: z.string(),
-    tags_require: z.array(z.string()),
-    tags_deny: z.array(z.string())
+export const flowsListFilters = z.object({
+    ts_to: z.string().optional().default(String(1e16)),
+    services: z.array(z.string()).optional(),
+    app_proto: z.string().optional(),
+    search: z.string().optional(),
+    tags_require: z.array(z.string()).optional(),
+    tags_deny: z.array(z.string()).optional()
 });
+
+export type FlowsListFilters = z.infer<typeof flowsListFilters>;
 
 export type Flow = {
     id: string,
@@ -36,20 +38,36 @@ export type Tags = Tag[];
 
 export const flowId = z.bigint();
 
-export const servicesConfig = z.map(
-    z.string(),
-    z.object({
+export const ctfConfig = z.object({
+    start_date: z.string(),
+    tick_length: z.number(),
+    refresh_rate: z.number(),
+    default_ip: z.ipv4(),
+    services: z.record(z.string(), z.object({
         ipports: z.array(z.string()),
         color: z.string()
-    })
-);
+    }))
+});
 
-export type ServicesConfig = z.infer<typeof servicesConfig>;
+export type CtfConfig = z.infer<typeof ctfConfig>;
 
-export type CtfConfig = {
-    start_date: string,
-	tick_length: number,
-	refresh_rate: number,
-	default_ip: string,
-	services: ServicesConfig
-};
+export const addService = z.object({
+    name: z.string(),
+    color: z.string().regex(/^#([a-fA-F0-9]{2}){3}$/),
+    serviceIP: z.ipv4(),
+    ports: z.string()
+});
+
+export type AddService = z.infer<typeof addService>;
+
+export const deleteService = z.object({
+    name: z.string()
+});
+
+export type DeleteService = z.infer<typeof deleteService>;
+
+export const editRefreshRate = z.object({
+    refreshRate: z.int32().min(1)
+});
+
+export type EditRefreshRate = z.infer<typeof editRefreshRate>;

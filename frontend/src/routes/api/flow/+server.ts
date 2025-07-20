@@ -1,23 +1,19 @@
+import { flowsListFilters } from "$lib/schema";
+import { CTF_CONFIG } from "$lib/server/config";
 import { betterEveDb, prismaEveDb } from "$lib/server/db/eve_db";
 import { prismaPayloadDb } from "$lib/server/db/payload_db";
 import { error, json, type RequestHandler } from "@sveltejs/kit";
 
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-    let ts_to = url.searchParams.get("to");
-    let services = url.searchParams.getAll("service");
-    let app_proto = url.searchParams.get("app_proto");
-    let search = url.searchParams.get("search");
-    let tags_require = url.searchParams.getAll("tag_require");
-    let tags_deny = url.searchParams.getAll("tag_deny");
-    if (ts_to) {
-        if (!Number(ts_to)) {
-            return error(400);
-        }
+    const filters = url.searchParams.get("filters") ?? "{}";
+    const parsed = flowsListFilters.safeParse(JSON.parse(filters));
+    
+    if (!parsed.success) {
+        return error(400, JSON.stringify(parsed.error.issues));
     }
-    else {
-        ts_to = String(1e16)
-    }
+
+    let { ts_to, services, app_proto, search, tags_require, tags_deny } = parsed.data;
 
     let query = `WITH fsrvs AS (SELECT value FROM json_each($services)),
                  ftags_req AS (SELECT value FROM json_each($tagsreq)),
@@ -34,40 +30,46 @@ export const GET: RequestHandler = async ({ url, locals }) => {
             WHERE ts_start <= $tsto
               AND ($appproto = app_proto OR $appproto IS NULL)`;
 
-    if (services.length === 1 && services[0] === "!") {
-        // Filter flows related to no services
-        query += " AND NOT (src_ipport IN fsrvs OR dest_ipport IN fsrvs)";
+    if (services) {
+        if (services.length === 1 && services[0] === "!") {
+            // Filter flows related to no services
+            query += " AND NOT (src_ipport IN fsrvs OR dest_ipport IN fsrvs)";
 
-        let services_addr = [];
-        for (const s of Object.values(locals.ctfConfig.services)) {
-            let ipports = s.ipports || s;
-            for (const ipport of ipports) {
-                services_addr.push(ipport);
+            let services_addr = [];
+            for (const s of Object.values(CTF_CONFIG.services)) {
+                let ipports = s.ipports || s;
+                for (const ipport of ipports) {
+                    services_addr.push(ipport);
+                }
             }
+
+            services = services_addr;
         }
-
-        services = services_addr;
-    }
-    else if (services.length > 0) {
-        query += " AND (src_ipport IN fsrvs OR dest_ipport IN fsrvs)";
+        else if (services.length > 0) {
+            query += " AND (src_ipport IN fsrvs OR dest_ipport IN fsrvs)";
+        }
     }
 
-    if (tags_deny.length > 0) {
-        // No alert with at least a denied tag exists for this flow
-        query += `
-            AND NOT EXISTS (
-                SELECT 1 FROM alert
-                WHERE flow_id == flow.id AND alert.tag IN ftags_deny
-            )`;
+    if (tags_deny) {
+        if (tags_deny.length > 0) {
+            // No alert with at least a denied tag exists for this flow
+            query += `
+                AND NOT EXISTS (
+                    SELECT 1 FROM alert
+                    WHERE flow_id == flow.id AND alert.tag IN ftags_deny
+                )`;
+        }
     }
 
-    if (tags_require.length > 0) {
-        // Relational division to get all flow_id matching all chosen tags
-        query += `
-            AND flow.id IN (
-                SELECT flow_id FROM alert WHERE tag IN ftags_req GROUP BY flow_id
-                HAVING COUNT(*) = (SELECT COUNT(*) FROM ftags_req)
-            )`;
+    if (tags_require) {
+        if (tags_require.length > 0) {
+            // Relational division to get all flow_id matching all chosen tags
+            query += `
+                AND flow.id IN (
+                    SELECT flow_id FROM alert WHERE tag IN ftags_req GROUP BY flow_id
+                    HAVING COUNT(*) = (SELECT COUNT(*) FROM ftags_req)
+                )`;
+        }
     }
 
     let search_fid = [];

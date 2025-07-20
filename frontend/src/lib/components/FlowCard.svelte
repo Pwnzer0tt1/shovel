@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { CtfConfig, Flow, Tags } from "$lib/schema";
 	import { selectedFlow } from "$lib/state.svelte";
+	import { ta } from "zod/v4/locales";
 	import TagBadge from "./TagBadge.svelte";
 
     let { index, flow, tags, ctfConfig }: { index: number, flow: Flow, tags: Tags, ctfConfig: CtfConfig } = $props();
@@ -16,7 +17,7 @@
     let serviceColor = $state("#6c757d");
     let serviceName = $state("Unknown");
     for (const [name, service] of Object.entries(ctfConfig.services)) {
-        if (service.includes(flow.dest_ipport)) {
+        if (service.ipports.includes(flow.dest_ipport)) {
             serviceColor = service.color;
             serviceName = name;
             break;

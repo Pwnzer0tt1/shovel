@@ -1,9 +1,8 @@
 <script lang="ts">
-	import type { CtfConfig, Flow } from "$lib/schema";
+	import type { CtfConfig } from "$lib/schema";
 	import { selectedFlow } from "$lib/state.svelte";
 	import { onMount } from "svelte";
 	import TextViewer from "./TextViewer.svelte";
-	import type { L } from "ace-builds-internal/lib/bidiutil";
     
     let { ctfConfig }: { ctfConfig: CtfConfig } = $props();
 
@@ -120,7 +119,7 @@
         const tick = ((json.flow.ts_start / 1000000 - start_ts) / ctfConfig.tick_length).toFixed(3);
 
         let fileinfos: any = {};
-        if (json.flow.app_proto !== "failed") {
+        if (json.flow.app_proto && json.flow.app_proto !== "failed") {
             for (const [txId, data] of Object.entries(json[json.flow.app_proto])) {
                 console.log(data)
                 let appDataFileinfo: {
@@ -198,6 +197,26 @@
         }
     });
 
+    function switchRawView(e: KeyboardEvent) {
+        if (e.target) {
+            if (e.target.tagName !== 'INPUT' && !e.repeat && !e.ctrlKey && e.key === 'v') {
+                let utf8Btn = document.getElementById("raw-data-btn-utf8");
+                let hexBtn = document.getElementById("raw-data-btn-hex");
+                
+                if (rawDataActiveView === "utf8") {
+                    rawDataActiveView = "hex";
+                    utf8Btn.checked = false;
+                    hexBtn.checked = true;
+                }
+                else if (rawDataActiveView === "hex") {
+                    rawDataActiveView = "utf8";
+                    utf8Btn.checked = true;
+                    hexBtn.checked = false;
+                }
+            }
+        }
+    }
+
     let tooltipTriggerList;
     let tooltipList;
     onMount(() => {
@@ -205,6 +224,8 @@
         tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     });
 </script>
+
+<svelte:document onkeydown={switchRawView} />
 
 {#await flowData}
     Loading...

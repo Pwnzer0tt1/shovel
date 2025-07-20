@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tickInfo } from "$lib/state.svelte";
 	import { onMount } from "svelte";
 
     let { startTs, tickLength }: {
@@ -7,7 +8,6 @@
     } = $props();
 
     let progressBarValue = $state(0);
-    let tickInfo = $state("Tick 0");
     let tickTimer = $state("00:00");
     let progressBarColor = $state("success");
 
@@ -20,7 +20,8 @@
         const remainingSeconds = Math.max(0, tickEndTime - now);
 
         progressBarValue = Math.min(100, Math.max(0, progress));
-        tickInfo = `Tick ${currentTick}`;
+
+        tickInfo.tickNumber = currentTick;
 
         const minutes = Math.floor(remainingSeconds / 60);
         const seconds = Math.floor(remainingSeconds % 60);
@@ -45,9 +46,9 @@
     });
 </script>
 
-<div class="card bg-body-tertiary border-2 p-2 shadow-lg">
+<div class="card bg-body-tertiary p-2 shadow-lg">
     <div class="hstack w-100 justify-content-evenly">
-        <small class="fw-bold">{tickInfo}</small>
+        <small class="fw-bold">Tick {tickInfo.tickNumber}</small>
         <div class="col-10">
             <div class="progress" role="progressbar" aria-label="Tick progress bar" aria-valuenow={progressBarValue} aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
                 <div class="progress-bar bg-{progressBarColor} progress-bar-striped progress-bar-animated" style="width: {progressBarValue}%"></div>

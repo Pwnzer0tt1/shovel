@@ -1,4 +1,4 @@
-import { loadServicesConfig, saveServicesConfig } from "$lib/server/services-config";
+import { loadServicesConfig, saveServicesConfig } from "$lib/server/config";
 import { error, json, type RequestHandler } from "@sveltejs/kit";
 
 
