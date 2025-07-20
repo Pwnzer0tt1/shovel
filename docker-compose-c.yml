@@ -18,16 +18,15 @@ services:
     environment:
       - PCAP_OVER_IP=pcap-broker:4242
 
-  webapp:
-    build: ./webapp
-    image: anssi/shovel-webapp:dev
+  frontend:
+    build: ./frontend
     restart: always
     volumes:
       - "./input_pcaps:/input_pcaps:ro" # remove to prevent users from downloading pcaps
       - "./suricata/output:/suricata/output:rw"
       - "./services_config.json:/webapp/services_config.json:rw"
     ports:
-      - 0.0.0.0:8000:8000
+      - 0.0.0.0:3000:3000
     env_file:
       - .env
 
