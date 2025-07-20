@@ -23,3 +23,15 @@ services:
       - 0.0.0.0:3000:3000
     env_file:
       - .env
+
+  postgres:
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+
+volumes:
+  postgres-data
