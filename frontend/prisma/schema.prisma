@@ -5,8 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "./src/generated/prisma"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -21,27 +21,25 @@ model flow {
   ts_end        BigInt?
   src_ip        String
   src_port      Int?
-  src_ipport    String?
   dest_ip       String
   dest_port     Int?
-  dest_ipport   String
   pcap_filename String?
   proto         String
   app_proto     String?
-  metadata      String?
-  extra_data    String?
+  metadata      Json? @db.Json
+  extra_data    Json? @db.Json
 
   @@index(fields: [ts_start], name: "flow_ts_start_idx")
   @@index(fields: [app_proto], name: "flow_app_proto_idx")
-  @@index(fields: [src_ipport], name: "flow_src_ipport_idx")
-  @@index(fields: [dest_ipport], name: "flow_dest_ipport_idx")
+  @@index(fields: [src_ip, src_port], name: "flow_src_ipport_idx")
+  @@index(fields: [dest_ip, dest_port], name: "flow_dest_ipport_idx")
 }
 
 model fileinfo {
   id          Int @id @default(autoincrement())
   flow_id     BigInt
   timestamp   BigInt
-  extra_data  String?
+  extra_data  Json? @db.Json
 
   @@unique([flow_id, timestamp])
 
@@ -53,7 +51,7 @@ model app_event {
   flow_id     BigInt
   timestamp   BigInt
   app_proto   String
-  extra_data  String?
+  extra_data  Json? @db.Json
 
   @@unique([flow_id, app_proto, timestamp])
 
@@ -64,7 +62,7 @@ model anomaly {
   id          Int @id @default(autoincrement())
   flow_id     BigInt
   timestamp   BigInt
-  extra_data  String?
+  extra_data  Json? @db.Json
 
   @@unique([flow_id, timestamp])
 
@@ -77,7 +75,7 @@ model alert {
   tag         String?
   color       String?
   timestamp   BigInt
-  extra_data  String?
+  extra_data  Json? @db.Json
 
   @@unique([flow_id, tag])
 
@@ -87,3 +85,14 @@ model alert {
 
 
 // Payload tables
+model raw {
+  id                Int @id @default(autoincrement())
+  flow_id           BigInt
+  count             Int?
+  server_to_client  Int?
+  blob              Bytes?
+
+  @@unique([flow_id, count])
+
+  @@index(fields: [flow_id], name: "raw_flow_id_idx")
+}
