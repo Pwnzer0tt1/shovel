@@ -5,10 +5,8 @@ CREATE TABLE "flow" (
     "ts_end" BIGINT,
     "src_ip" TEXT NOT NULL,
     "src_port" INTEGER,
-    "src_ipport" TEXT,
     "dest_ip" TEXT NOT NULL,
     "dest_port" INTEGER,
-    "dest_ipport" TEXT NOT NULL,
     "pcap_filename" TEXT,
     "proto" TEXT NOT NULL,
     "app_proto" TEXT,
@@ -79,10 +77,10 @@ CREATE INDEX "flow_ts_start_idx" ON "flow"("ts_start");
 CREATE INDEX "flow_app_proto_idx" ON "flow"("app_proto");
 
 -- CreateIndex
-CREATE INDEX "flow_src_ipport_idx" ON "flow"("src_ipport");
+CREATE INDEX "flow_src_ipport_idx" ON "flow"("src_ip", "src_port");
 
 -- CreateIndex
-CREATE INDEX "flow_dest_ipport_idx" ON "flow"("dest_ipport");
+CREATE INDEX "flow_dest_ipport_idx" ON "flow"("dest_ip", "dest_port");
 
 -- CreateIndex
 CREATE INDEX "fileinfo_flow_id_idx" ON "fileinfo"("flow_id");
