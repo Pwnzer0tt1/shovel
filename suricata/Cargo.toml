@@ -1,0 +1,22 @@
+# Copyright (C) 2024  ANSSI
+# SPDX-License-Identifier: CC0-1.0
+
+[package]
+name = "suricata-eve-postgres-output"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+name = "eve_postgres_output"
+
+[dependencies]
+env_logger = { version = "0.11.8", default-features = false }
+lazy_static = "1.5.0"
+log = "0.4.27"
+diesel = { version = "2.2.0", features = ["postgres", "serde_json"] }
+diesel_migrations = "2.2.0"
+dotenvy = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4.41"

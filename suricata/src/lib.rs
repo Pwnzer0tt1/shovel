@@ -3,25 +3,28 @@
 
 mod database;
 mod ffi;
+mod schema;
+mod models;
 
 use std::fmt::Debug;
 use std::os::raw::{c_char, c_int, c_void};
 use std::sync::mpsc;
 
+
 // Default configuration values.
-const DEFAULT_DATABASE_URI: &str = "file:suricata/output/eve.db";
+const DEFAULT_DATABASE_URI: &str = "postgresql://postgres@postgres:5432/postgres";
 const DEFAULT_BUFFER_SIZE: &str = "1000";
 
 #[derive(Debug, Clone)]
 struct Config {
-    filename: String,
+    db_url: String,
     buffer: usize,
 }
 
 impl Config {
     fn new() -> Self {
         Self {
-            filename: std::env::var("EVE_FILENAME").unwrap_or(DEFAULT_DATABASE_URI.into()),
+            db_url: std::env::var("DATABASE_URL").unwrap_or(DEFAULT_DATABASE_URI.into()),
             buffer: std::env::var("EVE_BUFFER")
                 .unwrap_or(DEFAULT_BUFFER_SIZE.into())
                 .parse()
@@ -45,7 +48,7 @@ extern "C" fn output_init(_conf: *const c_void, threaded: bool, data: *mut *mut 
     let config = Config::new();
 
     let (tx, rx) = mpsc::sync_channel(config.buffer);
-    let mut database_client = match database::Database::new(config.filename, rx) {
+    let mut database_client = match database::Database::new(config.db_url, rx) {
         Ok(client) => client,
         Err(err) => {
             log::error!("Failed to initialize database client: {:?}", err);
