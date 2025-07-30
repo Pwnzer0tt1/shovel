@@ -5,13 +5,15 @@ CREATE TABLE "flow" (
     "ts_end" BIGINT,
     "src_ip" TEXT NOT NULL,
     "src_port" INTEGER,
+    "src_ipport" TEXT,
     "dest_ip" TEXT NOT NULL,
     "dest_port" INTEGER,
+    "dest_ipport" TEXT,
     "pcap_filename" TEXT,
     "proto" TEXT NOT NULL,
     "app_proto" TEXT,
-    "metadata" JSON,
-    "extra_data" JSON,
+    "metadata" JSONB,
+    "extra_data" JSONB,
 
     CONSTRAINT "flow_pkey" PRIMARY KEY ("id")
 );
@@ -21,7 +23,7 @@ CREATE TABLE "fileinfo" (
     "id" SERIAL NOT NULL,
     "flow_id" BIGINT NOT NULL,
     "timestamp" BIGINT NOT NULL,
-    "extra_data" JSON,
+    "extra_data" JSONB,
 
     CONSTRAINT "fileinfo_pkey" PRIMARY KEY ("id")
 );
@@ -32,7 +34,7 @@ CREATE TABLE "app_event" (
     "flow_id" BIGINT NOT NULL,
     "timestamp" BIGINT NOT NULL,
     "app_proto" TEXT NOT NULL,
-    "extra_data" JSON,
+    "extra_data" JSONB,
 
     CONSTRAINT "app_event_pkey" PRIMARY KEY ("id")
 );
@@ -42,7 +44,7 @@ CREATE TABLE "anomaly" (
     "id" SERIAL NOT NULL,
     "flow_id" BIGINT NOT NULL,
     "timestamp" BIGINT NOT NULL,
-    "extra_data" JSON,
+    "extra_data" JSONB,
 
     CONSTRAINT "anomaly_pkey" PRIMARY KEY ("id")
 );
@@ -54,7 +56,7 @@ CREATE TABLE "alert" (
     "tag" TEXT,
     "color" TEXT,
     "timestamp" BIGINT NOT NULL,
-    "extra_data" JSON,
+    "extra_data" JSONB,
 
     CONSTRAINT "alert_pkey" PRIMARY KEY ("id")
 );
@@ -77,10 +79,10 @@ CREATE INDEX "flow_ts_start_idx" ON "flow"("ts_start");
 CREATE INDEX "flow_app_proto_idx" ON "flow"("app_proto");
 
 -- CreateIndex
-CREATE INDEX "flow_src_ipport_idx" ON "flow"("src_ip", "src_port");
+CREATE INDEX "flow_src_ipport_idx" ON "flow"("src_ipport");
 
 -- CreateIndex
-CREATE INDEX "flow_dest_ipport_idx" ON "flow"("dest_ip", "dest_port");
+CREATE INDEX "flow_dest_ipport_idx" ON "flow"("dest_ipport");
 
 -- CreateIndex
 CREATE INDEX "fileinfo_flow_id_idx" ON "fileinfo"("flow_id");
