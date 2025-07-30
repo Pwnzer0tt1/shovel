@@ -41,7 +41,7 @@ struct Context {
 extern "C" fn output_init(_conf: *const c_void, threaded: bool, data: *mut *mut c_void) -> c_int {
     assert!(
         !threaded,
-        "SQLite output plugin does not support threaded EVE yet"
+        "PostgreSQL output plugin does not support threaded EVE yet"
     );
 
     // Load configuration
@@ -66,7 +66,7 @@ extern "C" fn output_init(_conf: *const c_void, threaded: bool, data: *mut *mut 
 
 extern "C" fn output_deinit(data: *const c_void) {
     let context = unsafe { Box::from_raw(data as *mut Context) };
-    log::info!("SQLite output finished: count={}", context.count);
+    log::info!("PostgreSQL output finished: count={}", context.count);
     std::mem::drop(context);
 }
 
@@ -121,7 +121,7 @@ extern "C" fn plugin_init() {
     };
     let file_type_ptr = Box::into_raw(Box::new(file_type));
     if !unsafe { ffi::SCRegisterEveFileType(file_type_ptr) } {
-        log::error!("Failed to register sqlite plugin");
+        log::error!("Failed to register PostgreSQL plugin");
     }
 }
 
@@ -129,7 +129,7 @@ extern "C" fn plugin_init() {
 #[no_mangle]
 extern "C" fn SCPluginRegister() -> *const ffi::SCPlugin {
     let plugin = ffi::SCPlugin {
-        name: c"Eve SQLite Output".as_ptr(),
+        name: c"Eve PostgreSQL Output".as_ptr(),
         license: c"GPL-2.0".as_ptr(),
         author: c"ANSSI".as_ptr(),
         Init: plugin_init,

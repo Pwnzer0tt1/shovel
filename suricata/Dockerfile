@@ -8,7 +8,7 @@ RUN RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
 
 FROM alpine:3.22
 RUN apk update
-RUN apk add --no-cache suricata netcat-openbsd libpq-dev lua5.4-sql-postgres
+RUN apk add --no-cache suricata netcat-openbsd libpq-dev lua5.1-sql-postgres
 
 COPY . /suricata
 COPY --from=builder /src/target/release/libeve_postgres_output.so /suricata/

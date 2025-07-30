@@ -34,7 +34,10 @@ fn write_event(conn: &mut PgConnection, buf: &str) -> QueryResult<usize> {
     };
 
     let timestamp = chrono::DateTime::parse_from_str(eve_json.get("timestamp").expect("Missing timestamp.").as_str().unwrap(), "%Y-%m-%dT%H:%M:%S%.6f%z").unwrap().timestamp_micros();
-    let flow_id = eve_json.get("flow_id").expect("Missing flow_id").as_i64().unwrap();
+    let flow_id = match eve_json.get("flow_id") {
+        Some(v) => v.as_i64().unwrap(),
+        None => return Ok(0)
+    };
 
     // HACK: collect pcap_filename from app events, then use it later when writing flow event.
     // `pcap_filename` pointed by flow events seem wrong, this is maybe a Suricata bug.

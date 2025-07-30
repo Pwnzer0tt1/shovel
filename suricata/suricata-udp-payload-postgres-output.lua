@@ -51,7 +51,7 @@ function log (args)
         return
     end
     
-    assert(con:execute(string.format([[INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES ('%s', '%s', '%s', '%s') ON CONFLICT (flow_id) DO NOTHING;]], flow_id, count, direction, data)))
+    assert(con:execute(string.format([[INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES (%s, %s, %s, '%s'::bytea) ON CONFLICT (id) DO NOTHING;]], flow_id, count, direction, data)))
 end
 
 function deinit (args)
