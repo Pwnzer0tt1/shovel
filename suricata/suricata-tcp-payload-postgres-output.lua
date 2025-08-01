@@ -42,7 +42,7 @@ function log (args)
         direction = "1"
     end
 
-    assert(con:execute(string.format([[INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES (%s, %s, %s, '%s'::bytea) ON CONFLICT (id) DO NOTHING;]], flow_id, count, direction, data)))
+    assert(con:execute(string.format([[INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES (%s, %s, %s, '%s'::bytea) ON CONFLICT (id) DO NOTHING;]], flow_id, count, direction, con:escape(data))))
 end
 
 function deinit (args)
