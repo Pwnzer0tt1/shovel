@@ -82,8 +82,13 @@ fn write_event(conn: &mut PgConnection, buf: &str) -> QueryResult<usize> {
             let metadata = eve_json.get("metadata").cloned();
             let extra_data = eve_json.get("flow").cloned();
 
+            let ts_start = chrono::DateTime::parse_from_str(extra_data.as_ref().unwrap().get("start").expect("Missing start timestamp.").as_str().unwrap(), "%Y-%m-%dT%H:%M:%S%.6f%z").unwrap().timestamp_micros();
+            let ts_end = chrono::DateTime::parse_from_str(extra_data.as_ref().unwrap().get("end").expect("Missing end timestamp.").as_str().unwrap(), "%Y-%m-%dT%H:%M:%S%.6f%z").unwrap().timestamp_micros();
+
             let new_flow = NewFlow {
                 id: flow_id,
+                ts_start,
+                ts_end,
                 src_ip,
                 src_port,
                 dest_ip,

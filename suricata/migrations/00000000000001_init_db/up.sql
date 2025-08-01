@@ -2,8 +2,8 @@
 -- CreateTable
 CREATE TABLE "flow" (
     "id" BIGINT NOT NULL,
-    "ts_start" BIGINT,
-    "ts_end" BIGINT,
+    "ts_start" BIGINT NOT NULL,
+    "ts_end" BIGINT NOT NULL,
     "src_ip" TEXT NOT NULL,
     "src_port" INTEGER,
     "src_ipport" TEXT,
@@ -122,8 +122,6 @@ CREATE UNIQUE INDEX "raw_flow_id_count_key" ON "raw"("flow_id", "count");
 -- PostgreSQL generated columns require immutable values which is not guaranteed by timestamp function.
 CREATE FUNCTION set_ts_fn() RETURNS trigger AS $$
 BEGIN
-	UPDATE flow SET ts_start = (extract(epoch FROM (new.extra_data->>'start')::TIMESTAMPTZ) * 1000000)::BIGINT;
-	UPDATE flow SET ts_end = (extract(epoch FROM (new.extra_data->>'end')::TIMESTAMPTZ) * 1000000)::BIGINT;
     UPDATE flow SET src_ipport = src_ip || (CASE WHEN src_port IS NULL THEN '' ELSE ':' || src_port END);
 	UPDATE flow SET dest_ipport = dest_ip || (CASE WHEN dest_port IS NULL THEN '' ELSE ':' || dest_port END);
 

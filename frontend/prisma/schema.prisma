@@ -17,8 +17,8 @@ datasource db {
 // EVE tables
 model flow {
   id            BigInt @id
-  ts_start      BigInt?
-  ts_end        BigInt?
+  ts_start      BigInt
+  ts_end        BigInt
   src_ip        String
   src_port      Int?
   src_ipport    String?
@@ -30,6 +30,13 @@ model flow {
   app_proto     String?
   metadata      Json?
   extra_data    Json?
+
+  fileinfos     fileinfo[]
+  app_events    app_event[]
+  anomalies     anomaly[]
+  alerts        alert[]
+  raws          raw[]
+
 
   @@index(fields: [ts_start], name: "flow_ts_start_idx")
   @@index(fields: [app_proto], name: "flow_app_proto_idx")
@@ -43,6 +50,8 @@ model fileinfo {
   timestamp   BigInt
   extra_data  Json?
 
+  flow        flow @relation(fields: [flow_id], references: [id])
+
   @@unique([flow_id, timestamp])
 
   @@index(fields: [flow_id], name: "fileinfo_flow_id_idx")
@@ -55,6 +64,8 @@ model app_event {
   app_proto   String
   extra_data  Json?
 
+  flow        flow @relation(fields: [flow_id], references: [id])
+
   @@unique([flow_id, app_proto, timestamp])
 
   @@index(fields: [flow_id], name: "app_event_flow_id_idx")
@@ -65,6 +76,8 @@ model anomaly {
   flow_id     BigInt
   timestamp   BigInt
   extra_data  Json?
+
+  flow        flow @relation(fields: [flow_id], references: [id])
 
   @@unique([flow_id, timestamp])
 
@@ -78,6 +91,8 @@ model alert {
   color       String?
   timestamp   BigInt
   extra_data  Json?
+
+  flow        flow @relation(fields: [flow_id], references: [id])
 
   @@unique([flow_id, tag])
 
@@ -93,6 +108,8 @@ model raw {
   count             Int?
   server_to_client  Int?
   blob              Bytes?
+
+  flow              flow @relation(fields: [flow_id], references: [id])
 
   @@unique([flow_id, count])
 

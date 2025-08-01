@@ -1,8 +1,8 @@
 -- CreateTable
 CREATE TABLE "flow" (
     "id" BIGINT NOT NULL,
-    "ts_start" BIGINT,
-    "ts_end" BIGINT,
+    "ts_start" BIGINT NOT NULL,
+    "ts_end" BIGINT NOT NULL,
     "src_ip" TEXT NOT NULL,
     "src_port" INTEGER,
     "src_ipport" TEXT,

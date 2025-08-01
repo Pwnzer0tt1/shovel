@@ -58,8 +58,8 @@ diesel::table! {
 diesel::table! {
     flow (id) {
         id -> Int8,
-        ts_start -> Nullable<Int8>,
-        ts_end -> Nullable<Int8>,
+        ts_start -> Int8,
+        ts_end -> Int8,
         src_ip -> Text,
         src_port -> Nullable<Int4>,
         src_ipport -> Nullable<Text>,

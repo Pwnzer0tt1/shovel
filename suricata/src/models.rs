@@ -7,6 +7,8 @@ use crate::schema::{alert, anomaly, app_event, fileinfo, flow};
 #[diesel(table_name = flow)]
 pub struct NewFlow<'a> {
     pub id: i64,
+    pub ts_start: i64,
+    pub ts_end: i64,
     pub src_ip: &'a str,
     pub src_port: Option<i32>,
     pub dest_ip: &'a str,

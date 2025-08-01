@@ -3,8 +3,6 @@
 
 CREATE FUNCTION set_ts_fn() RETURNS trigger AS $$
 BEGIN
-	UPDATE flow SET ts_start = (extract(epoch FROM (new.extra_data->>'start')::TIMESTAMPTZ) * 1000000)::BIGINT;
-	UPDATE flow SET ts_end = (extract(epoch FROM (new.extra_data->>'end')::TIMESTAMPTZ) * 1000000)::BIGINT;
 	UPDATE flow SET src_ipport = src_ip || (CASE WHEN src_port IS NULL THEN '' ELSE ':' || src_port END);
 	UPDATE flow SET dest_ipport = dest_ip || (CASE WHEN dest_port IS NULL THEN '' ELSE ':' || dest_port END);
 
