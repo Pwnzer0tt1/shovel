@@ -5,15 +5,15 @@ use crate::schema::{alert, anomaly, app_event, fileinfo, flow};
 
 #[derive(Insertable)]
 #[diesel(table_name = flow)]
-pub struct NewFlow {
+pub struct NewFlow<'a> {
     pub id: i64,
-    pub src_ip: String,
+    pub src_ip: &'a str,
     pub src_port: Option<i32>,
-    pub dest_ip: String,
+    pub dest_ip: &'a str,
     pub dest_port: Option<i32>,
-    pub pcap_filename: Option<String>,
-    pub proto: String,
-    pub app_proto: Option<String>,
+    pub pcap_filename: Option<&'a str>,
+    pub proto: &'a str,
+    pub app_proto: Option<&'a str>,
     pub metadata: Option<serde_json::Value>,
     pub extra_data: Option<serde_json::Value>
 }

@@ -54,12 +54,12 @@ fn write_event(conn: &mut PgConnection, buf: &str) -> QueryResult<usize> {
 
     match event_type {
         "flow" => {
-            let src_ip = eve_json.get("src_ip").expect("Missing src_ip").to_string();
+            let src_ip = eve_json.get("src_ip").expect("Missing src_ip").as_str().unwrap();
             let src_port: Option<i32> = match eve_json.get("src_port") {
                 Some(v) => Some(v.as_i64().unwrap().try_into().unwrap()),
                 None => None
             };
-            let dest_ip = eve_json.get("dest_ip").expect("Missing dest_ip").to_string();
+            let dest_ip = eve_json.get("dest_ip").expect("Missing dest_ip").as_str().unwrap();
             let dest_port: Option<i32> = match eve_json.get("dest_port") {
                 Some(v) => Some(v.as_i64().unwrap().try_into().unwrap()),
                 None => None
@@ -67,16 +67,16 @@ fn write_event(conn: &mut PgConnection, buf: &str) -> QueryResult<usize> {
             
             let flow_pcap_local = FLOW_PCAP.lock().unwrap();
             let pcap_filename = match flow_pcap_local.get(&flow_id) {
-                Some(v) => Some(v.clone()),
+                Some(v) => Some(v.as_str()),
                 None => match eve_json.get("pcap_filename") {
-                    Some(p) => Some(p.to_string()),
-                    None => Some("".to_string())
+                    Some(p) => Some(p.as_str().unwrap()),
+                    None => Some("")
                 }
             };
 
-            let proto = eve_json.get("proto").unwrap().to_string();
+            let proto = eve_json.get("proto").unwrap().as_str().unwrap();
             let app_proto = match eve_json.get("app_proto") {
-                Some(v) => Some(v.to_string()),
+                Some(v) => Some(v.as_str().unwrap()),
                 None => None
             };
             let metadata = eve_json.get("metadata").cloned();
