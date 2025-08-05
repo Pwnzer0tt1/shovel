@@ -1,9 +1,10 @@
 # Copyright (C) 2024  ANSSI
 # SPDX-License-Identifier: CC0-1.0
+name: digger
+
 services:
   suricata:
     build: ./suricata
-    image: anssi/shovel-suricata:dev
     volumes:
       - "./input_pcaps:/input_pcaps:ro"
       - "./suricata/rules:/suricata/rules:ro"
@@ -66,9 +67,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
 
 volumes:
-  postgres-data
+  pgdata:
