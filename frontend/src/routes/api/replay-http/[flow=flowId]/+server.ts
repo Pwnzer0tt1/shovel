@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { betterEveDb } from "$lib/server/db/eve_db";
+import prisma from "$lib/server/prisma";
 import { error, json, type RequestHandler } from "@sveltejs/kit";
 
 
@@ -8,6 +8,7 @@ export const GET: RequestHandler = ({ params, locals }) => {
         return json({ error: "Flow ID is required" }, { status: 400 });
     }
 
+    /*
     // Get HTTP events
     let rows: any[] = betterEveDb.prepare("SELECT flow_id, extra_data FROM 'app-event' WHERE flow_id = ? AND app_proto = 'http' ORDER BY id").all(params.flow);
 
@@ -39,9 +40,7 @@ export const GET: RequestHandler = ({ params, locals }) => {
         }
         
         data.push(req);
-    }
-
-    
+    }*/    
 
     return json({});
 };
