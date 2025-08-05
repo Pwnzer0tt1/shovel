@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// EVE tables
+model flow {
+  id            BigInt @id
+  ts_start      BigInt
+  ts_end        BigInt
+  src_ip        String
+  src_port      Int?
+  src_ipport    String?
+  dest_ip       String
+  dest_port     Int?
+  dest_ipport   String?
+  pcap_filename String?
+  proto         String
+  app_proto     String?
+  metadata      Json?
+  extra_data    Json?
+
+  fileinfos     fileinfo[]
+  app_events    app_event[]
+  anomalies     anomaly[]
+  alerts        alert[]
+  raws          raw[]
+
+
+  @@index(fields: [ts_start], name: "flow_ts_start_idx")
+  @@index(fields: [app_proto], name: "flow_app_proto_idx")
+  @@index(fields: [src_ipport], name: "flow_src_ipport_idx")
+  @@index(fields: [dest_ipport], name: "flow_dest_ipport_idx")
+}
+
+model fileinfo {
+  id          Int @id @default(autoincrement())
+  flow_id     BigInt
+  timestamp   BigInt
+  extra_data  Json?
+
+  flow        flow @relation(fields: [flow_id], references: [id])
+
+  @@unique([flow_id, timestamp])
+
+  @@index(fields: [flow_id], name: "fileinfo_flow_id_idx")
+}
+
+model app_event {
+  id          Int @id @default(autoincrement())
+  flow_id     BigInt
+  timestamp   BigInt
+  app_proto   String
+  extra_data  Json?
+
+  flow        flow @relation(fields: [flow_id], references: [id])
+
+  @@unique([flow_id, app_proto, timestamp])
+
+  @@index(fields: [flow_id], name: "app_event_flow_id_idx")
+}
+
+model anomaly {
+  id          Int @id @default(autoincrement())
+  flow_id     BigInt
+  timestamp   BigInt
+  extra_data  Json?
+
+  flow        flow @relation(fields: [flow_id], references: [id])
+
+  @@unique([flow_id, timestamp])
+
+  @@index(fields: [flow_id], name: "anomaly_flow_id_idx")
+}
+
+model alert {
+  id          Int @id @default(autoincrement())
+  flow_id     BigInt
+  tag         String?
+  color       String?
+  timestamp   BigInt
+  extra_data  Json?
+
+  flow        flow @relation(fields: [flow_id], references: [id])
+
+  @@unique([flow_id, tag])
+
+  @@index(fields: [tag], name: "alert_tag_idx")
+  @@index(fields: [flow_id], name: "alert_flow_id_idx")
+}
+
+
+// Payload tables
+model raw {
+  id                Int @id @default(autoincrement())
+  flow_id           BigInt
+  count             Int?
+  server_to_client  Int?
+  blob              Bytes?
+
+  flow              flow @relation(fields: [flow_id], references: [id])
+
+  @@unique([flow_id, count])
+
+  @@index(fields: [flow_id], name: "raw_flow_id_idx")
+}

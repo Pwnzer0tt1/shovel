@@ -1,4 +1,4 @@
-import { betterEveDb, prismaEveDb } from "$lib/server/db/eve_db";
+import prisma from "$lib/server/prisma";
 import { error, json, type RequestHandler } from "@sveltejs/kit";
 
 
@@ -8,50 +8,111 @@ export const GET: RequestHandler = async ({ params, locals }) => {
     }
 
     // Query flow from database
-    let flow: any = betterEveDb.prepare("SELECT id, ts_start, ts_end, src_ipport, dest_ipport, dest_port, pcap_filename, proto, app_proto, metadata, extra_data FROM flow WHERE id = ?").get(params.flow);
-    if (!flow) {
+    const flow = await prisma.flow.findUnique({
+        select: {
+            id: true,
+            ts_start: true,
+            ts_end: true,
+            src_ipport: true,
+            dest_ipport: true,
+            dest_port: true,
+            pcap_filename: true,
+            proto: true,
+            app_proto: true,
+            metadata: true,
+            extra_data: true
+        },
+        where: {
+            id: BigInt(params.flow)
+        }
+    });
+
+    if (flow === null) {
         return error(404);
     }
 
-    flow.id = flow.id.toString();
-    flow.ts_start = flow.ts_start.toString();
-    flow.ts_end = flow.ts_end.toString();
-    flow.dest_port = flow.dest_port.toString();
     let result: any = {
-        flow: flow
+        flow: {
+            ...flow,
+            id: flow.id.toString(),
+            ts_start: flow.ts_start.toString(),
+            ts_end: flow.ts_end.toString()
+        }
     };
-    let app_proto = result.flow.app_proto;
 
-    // Get associated fileinfo
-    // See https://docs.suricata.io/en/suricata-6.0.9/file-extraction/file-extraction.html
-    if (["http", "http2", "smtp", "ftp", "nfs", "smb"].includes(app_proto)) {
-        let rows = betterEveDb.prepare("SELECT extra_data FROM fileinfo WHERE flow_id = ? ORDER BY id").all(params.flow);
-        result.fileinfo = rows;
+    // Get associated fileinfos
+    // See https://docs.suricata.io/en/suricata-7.0.10/file-extraction/file-extraction.html
+    if (flow.app_proto) {
+        if (["http", "http2", "smtp", "ftp", "nfs", "smb"].includes(flow.app_proto)) {
+            const fileinfo = await prisma.fileinfo.findMany({
+                select: {
+                    extra_data: true
+                },
+                where: {
+                    flow_id: BigInt(params.flow)
+                },
+                orderBy: {
+                    id: "asc"
+                }
+            });
+
+            result.fileinfo = fileinfo;
+        }
     }
 
     // Get associated application layer(s) metadata
-    if (app_proto && app_proto !== "failed") {
-        let rows: any[] = betterEveDb.prepare("SELECT app_proto, extra_data FROM 'app-event' WHERE flow_id = ? ORDER BY id").all(params.flow);
-        for (const row of rows) {
+    if (result.flow.app_proto !== null && result.flow.app_proto !== "failed") {
+        const appEvents = await prisma.app_event.findMany({
+            select: {
+                app_proto: true,
+                extra_data: true
+            },
+            where: {
+                flow_id: BigInt(params.flow)
+            },
+            orderBy: {
+                id: "asc"
+            }
+        });
+
+        for (const row of appEvents) {
             if (result[row.app_proto]) {
-                result[row.app_proto].push(JSON.parse(row.extra_data || ""));
+                result[row.app_proto].push(row.extra_data);
             }
             else {
-                result[row.app_proto] = [JSON.parse(row.extra_data || "")];
+                result[row.app_proto] = [row.extra_data];
             }
         }
     }
 
-    result.flow.metadata = JSON.parse(result.flow.metadata);
-    result.flow.extra_data = JSON.parse(result.flow.extra_data);
-
     // Get associated alert
     if (result.flow.extra_data.alerted) {
-        result.alert = betterEveDb.prepare("SELECT extra_data, color FROM alert WHERE flow_id = ? ORDER BY id").all(params.flow);
+        result.alert = await prisma.alert.findMany({
+            select: {
+                extra_data: true,
+                color: true
+            },
+            where: {
+                flow_id: BigInt(params.flow)
+            },
+            orderBy: {
+                id: "asc"
+            }
+        });
     }
 
     // Get associated anomalies
-    result.anomaly = betterEveDb.prepare("SELECT extra_data FROM anomaly WHERE flow_id = ? ORDER BY id").all(params.flow);
+    result.anomaly = await prisma.anomaly.findMany({
+        select: {
+            extra_data: true
+        },
+        where: {
+            flow_id: BigInt(params.flow)
+        },
+        orderBy: {
+            id: "asc"
+        }
+    });
 
     return json(result);
 };

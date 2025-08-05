@@ -1,12 +1,6 @@
 # Copyright (C) 2024  ANSSI
 # SPDX-License-Identifier: CC0-1.0
 input_pcaps/*
-suricata/output/filestore
-suricata/output/*.log
-suricata/output/*.db
-suricata/output/*.db-shm
-suricata/output/*.db-wal
-suricata/suricata-eve-sqlite-output/target
 
 # Configurazione
 .env

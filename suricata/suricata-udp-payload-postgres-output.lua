@@ -1,7 +1,7 @@
 -- Copyright (C) 2024  ANSSI
 -- SPDX-License-Identifier: GPL-2.0-or-later
 
--- This Suricata plugin logs UDP frames data to a SQLite database.
+-- This Suricata plugin logs UDP frames data to a PostgreSQL database.
 
 function init (args)
     local needs = {}
@@ -10,25 +10,12 @@ function init (args)
 end
 
 function setup (args)
-    SCLogNotice("Initializing plugin UDP payload SQLite Output; author=ANSSI; license=GPL-2.0")
+    SCLogNotice("Initializing plugin UDP payload PostgreSQL Output; author=ANSSI; license=GPL-2.0")
 
-    -- open database in WAL mode and init schema
-    sqlite3 = require("lsqlite3")
-    database = sqlite3.open(SCLogPath() .. "/payload.db")
-    assert(database:exec([[
-        PRAGMA journal_mode=wal;
-        PRAGMA synchronous=off;
-        CREATE TABLE IF NOT EXISTS raw (
-            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            flow_id INTEGER NOT NULL,
-            count INTEGER,
-            server_to_client INTEGER,
-            blob BLOB,
-            UNIQUE(flow_id, count)
-        );
-        CREATE INDEX IF NOT EXISTS "raw_flow_id_idx" ON raw(flow_id);
-    ]]) == sqlite3.OK)
-    stmt = database:prepare("INSERT OR IGNORE INTO raw (flow_id, count, server_to_client, blob) values(?, ?, ?, ?);")
+    -- Open database connection
+    luasql = require("luasql.postgres")
+    env = assert(luasql.postgres())
+    con = assert(env:connect("postgres", "postgres", "", "postgres"))
 
     -- packer counter for each flow
     flow_pkt_count = {}
@@ -63,9 +50,8 @@ function log (args)
     if #data == 0 then
         return
     end
-    assert(stmt:reset() == sqlite3.OK)
-    assert(stmt:bind_values(flow_id, count, direction, data) == sqlite3.OK)
-    assert(stmt:step() == sqlite3.DONE)
+    
+    assert(con:execute(string.format([[INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES (%s, %s, %s, '%s'::bytea) ON CONFLICT (id) DO NOTHING;]], flow_id, count, direction, con:escape(data))))
 end
 
 function deinit (args)

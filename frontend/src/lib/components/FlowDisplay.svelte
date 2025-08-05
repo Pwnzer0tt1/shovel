@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CtfConfig } from "$lib/schema";
+	import type { CtfConfig, Flow } from "$lib/schema";
 	import { selectedFlow } from "$lib/state.svelte";
 	import { onMount } from "svelte";
 	import TextViewer from "./TextViewer.svelte";
@@ -101,7 +101,6 @@
     let rawFlowData = $derived.by(async () => {
         let res = await fetch(`/api/flow/${selectedFlow.flow?.id}/raw`);
         let json = await res.json();
-        console.log(json);
 
         return {
             raw: json
@@ -110,15 +109,67 @@
 
     let flowData = $derived.by(async () => {
         let res = await fetch(`/api/flow/${selectedFlow.flow?.id}`);
-        let json = await res.json();
-        console.log(json);
+        let json: {
+            flow: Flow,
+            fileinfo?: {
+                extra_data: {
+                    gaps: boolean,
+                    size: number,
+                    state: string,
+                    tx_id: number,
+                    sha256: string,
+                    stored: boolean,
+                    file_id: number,
+                    filename: string
+                }
+            }[],
+            alert?: {
+                extra_data: {
+                    gid: number,
+                    rev: number,
+                    action: string,
+                    category: string,
+                    metadata: {
+                        tag: string[],
+                        color: string[]
+                    },
+                    severity: number,
+                    signature: string,
+                    signature_id: number
+                },
+                color: string
+            }[],
+            anomaly: {
+                extra_data: any
+            }[],
+            http?: any,
+            http2?: any,
+            quic?: any,
+            ftp?: any,
+            tls?: any,
+            tftp?: any,
+            nfs?: any,
+            smb?: any,
+            ssh?: any,
+            rdp?: any,
+            rfb?: any
+        } = await res.json();
 
-        const dateStart = new Date(json.flow.ts_start / 1000).toISOString().split("T").join(", ");
-        const dateEnd = new Date(json.flow.ts_end / 1000).toISOString().split("T").join(", ");
+        const dateStart = json.flow.extra_data?.start.split("T").join(", ");
+        const dateEnd = json.flow.extra_data?.end.split("T").join(", ");
         const start_ts = Math.floor(Date.parse(ctfConfig.start_date) / 1000);
-        const tick = ((json.flow.ts_start / 1000000 - start_ts) / ctfConfig.tick_length).toFixed(3);
+        const tick = ((Number(json.flow.ts_start) / 1000000 - start_ts) / ctfConfig.tick_length).toFixed(3);
 
-        let fileinfos: any = {};
+        let fileinfos: {
+            [key: string]: {
+                data: Blob,
+                ext: string,
+                filename: string,
+                filestore: string,
+                magic: string,
+                bytes: Uint8Array
+            }[]
+        } = {};
         if (json.flow.app_proto && json.flow.app_proto !== "failed") {
             for (const [txId, data] of Object.entries(json[json.flow.app_proto])) {
                 console.log(data)
@@ -131,7 +182,7 @@
                     bytes: Uint8Array
                 }[] = [];
                 if (json.fileinfo) {
-                    let fileinfo = json.fileinfo.map((x: any) => JSON.parse(x.extra_data));
+                    let fileinfo = json.fileinfo.map((x: any) => x.extra_data);
                     for (const d of Object.values(fileinfo)) {
                         if (d.tx_id === Number(txId)) {
                             let f = await fetch(`/filestore/${d.sha256.slice(0, 2)}/${d.sha256}`);
@@ -153,22 +204,20 @@
             }
         }
 
-        console.log(fileinfos);
-
         return {
             dateStart,
             dateEnd,
             tick,
             proto: json.flow.proto,
             appProto: json.flow.app_proto,
-            flowEstablished: json.flow.state !== "new",
+            flowEstablished: json.flow.extra_data ? json.flow.extra_data.state !== "new" : undefined,
             srcIpPort: json.flow.src_ipport,
             dstPort: json.flow.dest_port,
             dstIpPort: json.flow.dest_ipport,
-            pktsToServer: json.flow.extra_data.pkts_toserver,
-            pktsToClient: json.flow.extra_data.pkts_toclient,
-            bytesToServer: json.flow.extra_data.bytes_toserver,
-            bytesToClient: json.flow.extra_data.bytes_toclient,
+            pktsToServer: json.flow.extra_data ? json.flow.extra_data.pkts_toserver : undefined,
+            pktsToClient: json.flow.extra_data ? json.flow.extra_data.pkts_toclient : undefined,
+            bytesToServer: json.flow.extra_data ? json.flow.extra_data.bytes_toserver : undefined,
+            bytesToClient: json.flow.extra_data ? json.flow.extra_data.bytes_toclient : undefined,
             metadata: json.flow.metadata,
             alerts: json.alert,
             anomalies: json.anomaly,
@@ -197,32 +246,27 @@
         }
     });
 
+    let rawDataBtnUTF8: HTMLInputElement | undefined = $state();
+    let rawDataBtnHex: HTMLInputElement | undefined = $state();
+
     function switchRawView(e: KeyboardEvent) {
         if (e.target) {
             if (e.target.tagName !== 'INPUT' && !e.repeat && !e.ctrlKey && e.key === 'v') {
-                let utf8Btn = document.getElementById("raw-data-btn-utf8");
-                let hexBtn = document.getElementById("raw-data-btn-hex");
-                
-                if (rawDataActiveView === "utf8") {
-                    rawDataActiveView = "hex";
-                    utf8Btn.checked = false;
-                    hexBtn.checked = true;
-                }
-                else if (rawDataActiveView === "hex") {
-                    rawDataActiveView = "utf8";
-                    utf8Btn.checked = true;
-                    hexBtn.checked = false;
+                if (rawDataBtnUTF8 && rawDataBtnHex) {
+                    if (rawDataActiveView === "utf8") {
+                        rawDataActiveView = "hex";
+                        rawDataBtnUTF8.checked = false;
+                        rawDataBtnHex.checked = true;
+                    }
+                    else if (rawDataActiveView === "hex") {
+                        rawDataActiveView = "utf8";
+                        rawDataBtnUTF8.checked = true;
+                        rawDataBtnHex.checked = false;
+                    }
                 }
             }
         }
     }
-
-    let tooltipTriggerList;
-    let tooltipList;
-    onMount(() => {
-        tooltipTriggerList = document.querySelectorAll("[data-bs-toggle=\"tooltip\"]");
-        tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-    });
 </script>
 
 <svelte:document onkeydown={switchRawView} />
@@ -230,6 +274,7 @@
 {#await flowData}
     Loading...
 {:then flowData}
+    {@debug flowData}
     <div class="vstack gap-3">
         <!-- Flow card -->
         <div class="hstack gap-2 align-items-stretch">
@@ -247,15 +292,16 @@
         </div>
 
         <!-- Alerts -->
-        {#if flowData.alerts.length > 0}
-            <div class="vstack gap-3">
-                {#each flowData.alerts as a}
-                    {@const alert = JSON.parse(a.extra_data)}
-                    {#if alert.signature !== "tag"}
-                        <div class="card p-2 border-{a.color} shadow-lg">{alert.signature}</div>
-                    {/if}
-                {/each}
-            </div>
+        {#if flowData.alerts}
+            {#if flowData.alerts.length > 0}
+                <div class="vstack gap-3">
+                    {#each flowData.alerts as a}
+                        {#if a.extra_data.signature !== "tag"}
+                            <div class="card p-2 border-{a.color} shadow-lg">{a.extra_data.signature}</div>
+                        {/if}
+                    {/each}
+                </div>
+            {/if}
         {/if}
 
         <!-- Anomalies -->
@@ -290,30 +336,24 @@
                                 <a class="ms-auto" href="/">Generate script</a>
                             </div>
                             <hr>
-                            <div>
-                                {#if flowData.appProto === "http" || flowData.appProto === "http2"}
-                                    {#each flowData.flowAppProto as data}
-                                        {@const requestHeaders = data.request_headers.filter((x: any) => !HTTP_HEADER_BL.includes(x.name.toLowerCase()))}
-                                        {@const responseHeaders = data.response_headers.filter((x: any) => !HTTP_HEADER_BL.includes(x.name.toLowerCase()))}
-                                        {#each requestHeaders as h}
-                                            <p class="my-0">{h.name}: {h.value}</p>
-                                        {/each}
-                                        {#each responseHeaders as h}
-                                            <p class="my-0">{h.name}: {h.value}</p>
-                                        {/each}
-                                    {/each}
-                                {/if}
-                            </div>
-                            <div>
+                            <div class="vstack gap-4">
                                 {#each flowData.flowAppProto as data}
-                                    {#if flowData.appProto === "http" || flowData.appProto === "http2"}
-                                        <span class="fw-bold">{data.http_method ?? "?"} http://{data.hostname}:{data.http_port ?? flowData.dstPort}{data.url ?? ""} {data.protocol ?? ""}  <i class="bi bi-caret-left-fill"></i> {data.status ?? "?"}</span>
-                                    {:else}
-                                        <span>{JSON.stringify(data, null, 4)}</span>
-                                    {/if}
+                                    <div>
+                                        {#if flowData.appProto === "http" || flowData.appProto === "http2"}
+                                            <span class="fw-bold">{data.http_method ?? "?"} http://{data.hostname}:{data.http_port ?? flowData.dstPort}{data.url ?? ""} {data.protocol ?? ""} <i class="bi bi-caret-left-fill"></i> {data.status ?? "?"}</span>
+                                            {#each data.request_headers as  h}
+                                                <p class="my-0">{h.name}: {h.value}</p>
+                                            {/each}
+                                            {#each data.response_headers as  h}
+                                                <p class="my-0">{h.name}: {h.value}</p>
+                                            {/each}
+                                        {:else}
+                                            <span>{JSON.stringify(data, null, 4)}</span>
+                                        {/if}
+                                    </div>
                                 {/each}
                             </div>
-                            <div class="vstack gap-3 mt-3">
+                            <div class="vstack gap-3">
                                 {#each Object.entries(flowData.fileinfos[flowData.appProto]) as [k, v]}
                                     <div class="accordion" id="accordion-app-{k}">
                                         <div class="accordion-item">
@@ -327,7 +367,7 @@
                                                         {#if ["gif", "jpg", "png", "svg"].includes(v.ext)}
                                                             <img src={URL.createObjectURL(v.data)} alt="">
                                                         {:else if v.ext === "pdf"}
-                                                            <iframe src={URL.createObjectURL(v.data)} frameborder="0"></iframe>
+                                                            <iframe title="App data viewer" src={URL.createObjectURL(v.data)} frameborder="0"></iframe>
                                                         {:else if v.ext === "html"}
                                                             <iframe class="bg-light w-100" style="height: 40vh;" title="HTML renderer" src={URL.createObjectURL(v.data.slice(0, v.data.size, "text/html"))} frameborder="0"></iframe>
                                                         {:else}
@@ -362,7 +402,8 @@
         {#await rawFlowData}
             Loading...
         {:then rawFlowData}
-            {#if ["TCP", "UDP"].includes(flowData.proto) && flowData.flowEstablished}
+            {@debug rawFlowData}
+            {#if (flowData.proto === "TCP" || flowData.proto === "UDP") && flowData.flowEstablished}
                 <div class="accordion" id="accordion-raw">
                     <div class="accordion-item border-primary shadow-lg">
                         <h2 class="accordion-header">
@@ -372,10 +413,10 @@
                             <div class="accordion-body vstack gap-3">
                                 <div class="hstack">
                                     <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                                        <input value="utf8" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" id="raw-data-btn-utf8" autocomplete="off" checked>
+                                        <input value="utf8" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" bind:this={rawDataBtnUTF8} id="raw-data-btn-utf8" autocomplete="off" checked>
                                         <label class="btn btn-outline-primary" for="raw-data-btn-utf8">UTF-8</label>
 
-                                        <input value="hex" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" id="raw-data-btn-hex" autocomplete="off">
+                                        <input value="hex" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" bind:this={rawDataBtnHex} id="raw-data-btn-hex" autocomplete="off">
                                         <label class="btn btn-outline-primary" for="raw-data-btn-hex">Hex</label>
                                     </div>
                                     <a class="ms-auto" href="/">Generate script</a>

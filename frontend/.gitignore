@@ -23,7 +23,5 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-
-/prisma_eve_db/eve_db
-
-/prisma_payload_db/payload_db
+# Prisma generated client
+src/generated/prisma

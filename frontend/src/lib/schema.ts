@@ -3,7 +3,10 @@ import { z } from "zod/v4";
 
 export const flowsListFilters = z.object({
     ts_to: z.string().optional().default(String(1e16)),
-    services: z.array(z.string()).optional(),
+    services: z.array(z.object({
+        ip: z.ipv4(),
+        port: z.int()
+    })).optional(),
     app_proto: z.string().optional(),
     search: z.string().optional(),
     tags_require: z.array(z.string()).optional(),
@@ -14,19 +17,46 @@ export type FlowsListFilters = z.infer<typeof flowsListFilters>;
 
 export type Flow = {
     id: string,
-    ts_start: number,
-    ts_end: number,
+    ts_start: string,
+    ts_end: string,
+    src_ip: string,
+    src_port: number | null,
+    src_ipport: string,
+    dest_ip: string,
+    dest_port: number | null,
     dest_ipport: string,
-    app_proto: string,
+    pcap_filename: string,
+    proto: string,
+    app_proto: string | null,
     tags: string,
     metadata: {
-        flowints: {
+        flowints?: {
             [key: string]: number
         },
-        flowvars: {
+        flowvars?: {
             match: string
-        }[]
-    }
+        }[],
+        flowbits?: string[]
+    } | null,
+    extra_data: {
+        pkts_toserver: number,
+        pkts_toclient: number,
+        bytes_toserver: number,
+        bytes_toclient: number,
+        bypassed: {
+            pkts_toserver: number,
+            pkts_toclient: number,
+            bytes_toserver: number,
+            bytes_toclient: number
+        },
+        start: string,
+        end: string,
+        age: number,
+        bypass: string,
+        state: string,
+        reason: string,
+        alerted: boolean
+    } | null
 };
 export type Flows = Flow[];
 

@@ -29,9 +29,6 @@
         flows = json.flows;
         tags = json.tags;
         appProto = json.appProto;
-
-        selectedFlow.flow = undefined;
-        selectedFlow.flowIndex = -1;
     }
 
     function flowsSelection(e: KeyboardEvent) {
