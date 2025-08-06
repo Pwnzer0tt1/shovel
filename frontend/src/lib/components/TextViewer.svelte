@@ -4,17 +4,17 @@
     let {
         text,
         ext,
-        magic
+        magic,
+        sha256
     }: {
         text: string,
         ext: string,
-        magic: string
+        magic: string,
+        sha256: string
     } = $props();
 
-    let id = Math.floor(Math.random() * 10 ** 9)
-
     onMount(() => {
-        const editor = ace.edit(`editor-${id}`);
+        const editor = ace.edit(`editor-${sha256}`);
         editor.setOptions({
             readOnly: true,
             minLines: 10,
@@ -36,4 +36,4 @@
 </script>
 
 
-<div id="editor-{id}" class="w-100 rounded-bottom">{text}</div>
+<div id="editor-{sha256}" class="w-100 rounded-bottom">{text}</div>

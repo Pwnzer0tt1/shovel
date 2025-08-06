@@ -33,7 +33,8 @@
 
     function flowsSelection(e: KeyboardEvent) {
         if (e.target) {
-            if (e.target.tagName !== "INPUT" && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+            let el = e.target as HTMLElement;
+            if (el.tagName !== "INPUT" && !e.ctrlKey && !e.altKey && !e.shiftKey) {
                 switch (e.code) {
                     case "ArrowLeft":
                         if (selectedFlow.flow) {

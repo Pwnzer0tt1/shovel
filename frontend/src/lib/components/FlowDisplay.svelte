@@ -3,6 +3,7 @@
 	import { selectedFlow } from "$lib/state.svelte";
 	import { onMount } from "svelte";
 	import TextViewer from "./TextViewer.svelte";
+	import HexDumpViewer from "./HexDumpViewer.svelte";
     
     let { ctfConfig }: { ctfConfig: CtfConfig } = $props();
 
@@ -21,31 +22,6 @@
         'Zip archive': 'zip'
     };
 
-    const HTTP_HEADER_BL = [
-        ':method',
-        ':path',
-        ':scheme',
-        ':status',
-        'accept-ranges',
-        'allow',
-        'cache-control',
-        'connection',
-        'content-length',
-        'content-range',
-        'content-type',
-        'cross-origin-opener-policy',
-        'date',
-        'host',
-        'last-modified',
-        'location',
-        'referrer-policy',
-        'transfer-encoding',
-        'vary',
-        'x-content-type-options',
-        'x-frame-options',
-        undefined // header name is missing
-    ];
-
     function getExtFromMagic(magic: string) {
         for (const [magicPrefix, ext] of Object.entries(MAGIC_EXT)) {
             if (magic.startsWith(magicPrefix)) {
@@ -53,49 +29,6 @@
             }
         }
         return "txt";
-    }
-
-    function hexdump(byteArray: Uint8Array) {
-        let hexdump = "";
-
-        const asciiRepr = slice => {
-            let ascii = "";
-            slice.forEach((b) => {
-                if (b >= 0x20 && b < 0x7f) {
-                    ascii += String.fromCharCode(b);
-                }
-                else {
-                    ascii += ".";
-                }
-            });
-            return ascii;
-        }
-
-        byteArray.forEach((b, i) => {
-            if (i % 16 === 0) {
-                hexdump += i.toString(16).padStart(8, "0") + "  ";
-            }
-
-            hexdump += b.toString(16).padStart(2, "0") + " ";
-
-            if (i % 16 === 15 || i === byteArray.length - 1) {
-                if (i % 16 !== 15) {
-                    hexdump += " ".repeat((15 - (i % 16)) * 3);
-                    if (i % 16 < 8) {
-                        hexdump += " ";
-                    }
-                }
-
-                const sliceStart = Math.floor(i / 16) * 16;
-                const slice = byteArray.slice(sliceStart, sliceStart + 16);
-                hexdump += ` |${asciiRepr(slice)}|\n`;
-            }
-            else if (i % 8 === 7) {
-                hexdump += " ";
-            }
-        });
-
-        return hexdump;
     }
 
     let rawFlowData = $derived.by(async () => {
@@ -179,7 +112,8 @@
                     filename: string,
                     filestore: string,
                     magic: string,
-                    bytes: Uint8Array
+                    bytes: Uint8Array,
+                    sha256: string
                 }[] = [];
                 if (json.fileinfo) {
                     let fileinfo = json.fileinfo.map((x: any) => x.extra_data);
@@ -195,7 +129,8 @@
                                 filename: d.filename,
                                 filestore: `/filestore/${d.sha256.slice(0, 2)}/${d.sha256}`,
                                 magic: d.magic ?? "",
-                                bytes
+                                bytes,
+                                sha256: d.sha256
                             });
                         }
                     }
@@ -246,30 +181,32 @@
         }
     });
 
-    let rawDataBtnUTF8: HTMLInputElement | undefined = $state();
-    let rawDataBtnHex: HTMLInputElement | undefined = $state();
-
-    function switchRawView(e: KeyboardEvent) {
+    function switchView(e: KeyboardEvent) {
         if (e.target) {
-            if (e.target.tagName !== 'INPUT' && !e.repeat && !e.ctrlKey && e.key === 'v') {
-                if (rawDataBtnUTF8 && rawDataBtnHex) {
-                    if (rawDataActiveView === "utf8") {
-                        rawDataActiveView = "hex";
-                        rawDataBtnUTF8.checked = false;
-                        rawDataBtnHex.checked = true;
-                    }
-                    else if (rawDataActiveView === "hex") {
-                        rawDataActiveView = "utf8";
-                        rawDataBtnUTF8.checked = true;
-                        rawDataBtnHex.checked = false;
-                    }
+            let el = e.target as HTMLElement;
+            if (el.tagName !== 'INPUT' && !e.repeat && !e.ctrlKey && e.key === 'v') {
+                if (appDataActiveView === "render") {
+                    appDataActiveView = "utf8";
+                }
+                else if (appDataActiveView === "utf8") {
+                    appDataActiveView = "hex";
+                }
+                else if (appDataActiveView === "hex") {
+                    appDataActiveView = "render";
+                }
+                
+                if (rawDataActiveView === "utf8") {
+                    rawDataActiveView = "hex";    
+                }
+                else if (rawDataActiveView === "hex") {
+                    rawDataActiveView = "utf8";
                 }
             }
         }
     }
 </script>
 
-<svelte:document onkeydown={switchRawView} />
+<svelte:document onkeydown={switchView} />
 
 {#await flowData}
     Loading...
@@ -324,13 +261,13 @@
                         <div class="accordion-body vstack gap-3">
                             <div class="hstack">
                                 <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                                    <input value="render" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-render" autocomplete="off" checked>
+                                    <input value="render" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-render" autocomplete="off" checked={appDataActiveView === "render"}>
                                     <label class="btn btn-outline-primary" for="app-data-btn-render">Render</label>
 
-                                    <input value="utf8" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-utf8" autocomplete="off">
+                                    <input value="utf8" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-utf8" autocomplete="off"  checked={appDataActiveView === "utf8"}>
                                     <label class="btn btn-outline-primary" for="app-data-btn-utf8">UTF-8</label>
 
-                                    <input value="hex" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-hex" autocomplete="off">
+                                    <input value="hex" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-hex" autocomplete="off"  checked={appDataActiveView === "hex"}>
                                     <label class="btn btn-outline-primary" for="app-data-btn-hex">Hex</label>
                                 </div>
                                 <a class="ms-auto" href="/">Generate script</a>
@@ -379,12 +316,12 @@
                                                 {:else if appDataActiveView === "utf8"}
                                                     <div class="accordion-body p-0">
                                                         {#await v.data.text() then t}
-                                                            <TextViewer text={t} ext={v.ext} magic={v.magic} />
+                                                            <TextViewer text={t} ext={v.ext} magic={v.magic} sha256={v.sha256} />
                                                         {/await}
                                                     </div>
                                                 {:else if appDataActiveView === "hex"}
                                                     <div class="accordion-body">
-                                                        <pre>{hexdump(v.bytes)}</pre>
+                                                        <HexDumpViewer sha256={v.sha256} blob={v.bytes} />
                                                     </div>
                                                 {/if}
                                             </div>
@@ -413,22 +350,22 @@
                             <div class="accordion-body vstack gap-3">
                                 <div class="hstack">
                                     <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                                        <input value="utf8" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" bind:this={rawDataBtnUTF8} id="raw-data-btn-utf8" autocomplete="off" checked>
+                                        <input value="utf8" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" id="raw-data-btn-utf8" autocomplete="off" checked={rawDataActiveView === "utf8"}>
                                         <label class="btn btn-outline-primary" for="raw-data-btn-utf8">UTF-8</label>
 
-                                        <input value="hex" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" bind:this={rawDataBtnHex} id="raw-data-btn-hex" autocomplete="off">
+                                        <input value="hex" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" id="raw-data-btn-hex" autocomplete="off" checked={rawDataActiveView === "hex"}>
                                         <label class="btn btn-outline-primary" for="raw-data-btn-hex">Hex</label>
                                     </div>
                                     <a class="ms-auto" href="/">Generate script</a>
                                 </div>
                                 <hr>
                                 <div class="vstack gap-3 mt-3">
-                                    {#each rawFlowData.raw as chunk}
+                                    {#each Object.entries(rawFlowData.raw) as [i, chunk]}
                                         {@const byteArray = Uint8Array.from(atob(chunk.data), c => c.charCodeAt(0))}
                                         {#if rawDataActiveView === "utf8"}
                                             <pre class="p-2 {chunk.server_to_client === "0" ? "bg-danger" : ""}{chunk.server_to_client === "1" ? "bg-success" : ""}">{new TextDecoder().decode(byteArray)}</pre>
                                         {:else if rawDataActiveView === "hex"}
-                                            <pre class="p-2 {chunk.server_to_client === "0" ? "bg-danger" : ""}{chunk.server_to_client === "1" ? "bg-success" : ""}">{hexdump(byteArray)}</pre>
+                                            <pre class="p-2 {chunk.server_to_client === "0" ? "bg-danger" : ""}{chunk.server_to_client === "1" ? "bg-success" : ""}"><HexDumpViewer sha256={i} blob={byteArray} /></pre>
                                         {/if}
                                     {/each}
                                 </div>
