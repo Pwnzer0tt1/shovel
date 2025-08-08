@@ -1,27 +1,27 @@
 <script lang="ts">
-	import type { CtfConfig, Flow, Tags } from "$lib/schema";
-	import { selectedFlow } from "$lib/state.svelte";
+	import type { Flow, Tags } from "$lib/schema";
+	import { ctfConfig, selectedFlow } from "$lib/state.svelte";
 	import TagBadge from "./TagBadge.svelte";
 
-    let { index, flow, tags, ctfConfig }: { index: number, flow: Flow, tags: Tags, ctfConfig: CtfConfig } = $props();
+    let { index, flow, tags }: { index: number, flow: Flow, tags: Tags } = $props();
     
-    const delay = (flow.ts_end - flow.ts_start) / 1000;
-    const time = new Date(flow.ts_start / 1000).toISOString().split("T")[1];
+    const delay = (Number(flow.ts_end) - Number(flow.ts_start)) / 1000;
+    const time = new Date(Number(flow.ts_start) / 1000).toISOString().split("T")[1];
     
-    const flowTags = flow.alerts.map((v) => v.tag);
+    const flowTags = (flow.alerts ?? []).map((v) => v.tag);
     const appProto = flow.app_proto ? flow.app_proto.replace("failed", "raw") : "raw";
 
     let btn: HTMLButtonElement;
 
-    let serviceColor = $state("#6c757d");
-    let serviceName = $state("Unknown");
-    for (const [name, service] of Object.entries(ctfConfig.services)) {
-        if (service.ipports.includes(flow.dest_ipport)) {
-            serviceColor = service.color;
-            serviceName = name;
-            break;
+    let {serviceColor, serviceName} = $derived.by(() => {
+        for (const [name, service] of Object.entries(ctfConfig.config.services)) {
+            if (service.ipports.map(v => `${v.ip}:${v.port}`).includes(flow.dest_ipport)) {
+                return {serviceColor: service.color, serviceName: name};
+            }
         }
-    }
+
+        return {serviceColor: "#6c757d", serviceName: "Unknown"};
+    });
 
     function selectFlow() {
         selectedFlow.flow = flow;

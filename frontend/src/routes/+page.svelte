@@ -5,10 +5,11 @@
 	import TickProgressBar from '$lib/components/TickProgressBar.svelte';
 	import WelcomePanel from '$lib/components/WelcomePanel.svelte';
 	import type { Flows, Tags } from '$lib/schema';
-	import { flowsFilters, selectedFlow, selectedPanel } from '$lib/state.svelte.js';
+	import { ctfConfig, flowsFilters, selectedFlow, selectedPanel } from '$lib/state.svelte.js';
 	import { onMount } from 'svelte';
 
     let { data } = $props();
+    ctfConfig.config = data.ctfConfig;
 
 
     let innerHeight = $state(0);
@@ -96,16 +97,16 @@
     <div class="hstack gap-2 pb-2" style="height: {panelsHeight}px;">
         <div class="pb-3 h-100">
             <!-- Side bar -->
-            <SideBar ctfConfig={data.ctfConfig} flows={flows} tags={tags} appProto={appProto} />
+            <SideBar flows={flows} tags={tags} appProto={appProto} />
         </div>
         <div class="col-9 h-100 overflow-y-auto pe-2">
             {#if selectedPanel.view === "ServicesManager"}
                 <!-- Manage services -->
-                <ServicesManager ctfConfig={data.ctfConfig} addServiceForm={data.addServiceForm} deleteServiceForm={data.deleteServiceForm} editRefreshRateForm={data.editRefreshRateForm} />
+                <ServicesManager />
             {:else}
                 {#if selectedFlow.flow}
                     <!-- Flow display -->
-                    <FlowDisplay ctfConfig={data.ctfConfig} />
+                    <FlowDisplay />
                 {:else}
                     <!-- Welcome section, shown only when no flows are selected -->
                     <WelcomePanel />

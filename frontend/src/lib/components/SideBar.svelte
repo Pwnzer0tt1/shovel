@@ -1,10 +1,9 @@
 <script lang="ts">
-	import type { CtfConfig, Flows, Tags } from "$lib/schema";
-	import { flowsFilters, selectedPanel, tickInfo } from "$lib/state.svelte";
+	import type { Flows, Tags } from "$lib/schema";
+	import { ctfConfig, flowsFilters, selectedPanel, tickInfo } from "$lib/state.svelte";
 	import FlowCard from "./FlowCard.svelte";
 
-    let { ctfConfig, flows, tags, appProto }: {
-        ctfConfig: CtfConfig,
+    let { flows, tags, appProto }: {
         flows: Flows,
         tags: Tags,
         appProto: string[]
@@ -16,18 +15,18 @@
     let settingsHeight = $state(0);
     let flowsListHeight = $derived(sideBarHeight - autoUpdateBtnHeight - settingsHeight);
 
-    let selectedSeervice: string = $state("");
+    let selectedService: string = $state("");
     let beforeTick: number | undefined = $state(undefined);
     let protocol: string = $state("");
     let search: string = $state("");
 
-    function changeSelectedService() {
+    function changeSelectedServices() {
 
     }
 
     function changeBeforeTick() {
         if (beforeTick) {
-            flowsFilters.ts_to = String(Math.floor((beforeTick * ctfConfig.tick_length + Math.floor(Date.parse(ctfConfig.start_date) / 1000)) * 1000000));
+            flowsFilters.ts_to = String(Math.floor((beforeTick * ctfConfig.config.tick_length + Math.floor(Date.parse(ctfConfig.config.start_date) / 1000)) * 1000000));
         }
     }
 
@@ -58,22 +57,22 @@
         <select class="form-select shadow-lg">
             <option value="" selected>All flows</option>
             <option value="!">Flows from unknown services</option>
-            {#each Object.entries(ctfConfig.services) as [name, service]}
+            {#each Object.entries(ctfConfig.config.services) as [name, service]}
                 <optgroup label={name}>
                     {#if service.ipports.length > 1}
-                        <option value={ service.ipports.join(", ") }>All ({ name })</option>
+                        <option value={ service.ipports.map((v) => `${v.ip}:${v.port}`).join(", ") }>All ({ name })</option>
                     {/if}
                     {#each service.ipports as ipport}
-                        <option value={ipport}>{ipport} ({ name })</option>
+                        <option value="{ipport.ip}:{ipport.port}">{ipport.ip}:{ipport.port} ({ name })</option>
                     {/each}
                 </optgroup>
             {/each}
         </select>
-        <button onclick={() => selectedPanel.view = "ServicesManager"} class="btn btn-secondary shadow-lg" title="Customize services" aria-label="Service settings">
-            <i class="bi bi-gear-fill"></i>
+        <button onclick={() => selectedPanel.view = "ServicesManager"} class="btn btn-secondary shadow-lg" title="Services manager" aria-label="Service settings">
+            <i class="bi bi-boxes"></i>
         </button>
         <div class="dropend">
-            <button class="btn btn-secondary shadow-lg text-nowrap" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Dropdown filter">
+            <button class="btn btn-secondary shadow-lg text-nowrap" type="button" data-bs-toggle="dropdown" title="Flows filters" aria-expanded="false" aria-label="Dropdown filter">
                 <i class="bi bi-funnel-fill"></i>
                 <i class="bi bi-chevron-right"></i>
             </button>
@@ -127,7 +126,7 @@
             <div class="overflow-y-scroll">
                 <div class="list-group list-group-flush m-1 rounded">
                     {#each Object.entries(flows) as [index, f]}
-                        <FlowCard index={Number(index)} flow={f} tags={tags} ctfConfig={ctfConfig} />
+                        <FlowCard index={Number(index)} flow={f} tags={tags} />
                     {/each}
                 </div>
             </div>

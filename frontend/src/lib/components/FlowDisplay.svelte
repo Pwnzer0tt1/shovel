@@ -1,11 +1,9 @@
 <script lang="ts">
-	import type { CtfConfig, Flow } from "$lib/schema";
-	import { selectedFlow } from "$lib/state.svelte";
-	import { onMount } from "svelte";
+	import type { Flow } from "$lib/schema";
+	import { ctfConfig, selectedFlow } from "$lib/state.svelte";
 	import TextViewer from "./TextViewer.svelte";
 	import HexDumpViewer from "./HexDumpViewer.svelte";
     
-    let { ctfConfig }: { ctfConfig: CtfConfig } = $props();
 
     let appDataActiveView: "render" | "utf8" | "hex" = $state("render");
     let rawDataActiveView: "utf8" | "hex" = $state("utf8");
@@ -105,7 +103,6 @@
         } = {};
         if (json.flow.app_proto && json.flow.app_proto !== "failed") {
             for (const [txId, data] of Object.entries(json[json.flow.app_proto])) {
-                console.log(data)
                 let appDataFileinfo: {
                     data: Blob,
                     ext: string,
@@ -157,7 +154,8 @@
             alerts: json.alert,
             anomalies: json.anomaly,
             flowAppProto: json[json.flow.app_proto],
-            fileinfos
+            fileinfos,
+            pcapFilename: json.flow.pcap_filename
         };
     });
 
@@ -225,7 +223,7 @@
                 <p class="my-0"><i class="bi bi-arrow-right"></i> {flowData.pktsToServer} packets ({flowData.bytesToServer} bytes)</p>
                 <p class="my-0"><i class="bi bi-arrow-left"></i> {flowData.pktsToClient} packets ({flowData.bytesToClient} bytes)</p>
             </div>
-            <button class="btn btn-success shadow-lg" aria-label="Download pcap"><i class="bi bi-file-earmark-arrow-down-fill"></i></button>
+            <a href={flowData.pcapFilename.slice(1, -1)} download={flowData.pcapFilename.slice(1, -1).split("/")[2]} class="btn btn-success shadow-lg d-flex align-items-center" aria-label="Download pcap"><i class="bi bi-file-earmark-arrow-down-fill"></i></a>
         </div>
 
         <!-- Alerts -->

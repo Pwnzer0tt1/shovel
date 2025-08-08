@@ -1,100 +1,103 @@
 <script lang="ts">
-	import type { CtfConfig, AddService, DeleteService, EditRefreshRate } from "$lib/schema";
-	import { selectedFlow, selectedPanel } from "$lib/state.svelte";
-	import { superForm, type SuperValidated } from "sveltekit-superforms";
+	import { ctfConfig, selectedPanel } from "$lib/state.svelte";
 	import Toast from "./Toast.svelte";
 	
 
-    let { ctfConfig, addServiceForm, deleteServiceForm, editRefreshRateForm }: {
-        ctfConfig: CtfConfig,
-        addServiceForm: SuperValidated<AddService, any, AddService>,
-        deleteServiceForm: SuperValidated<DeleteService, any, DeleteService>,
-        editRefreshRateForm: SuperValidated<EditRefreshRate, any, EditRefreshRate>
-    } = $props();
-
-    const { form: form_addService, errors: errors_addService, constraints: constraints_addService, message: message_addService, enhance: enhance_addService } = superForm(addServiceForm);
-    const { form: form_deleteService, errors: errors_deleteService, constraints: constraints_deleteService, message: message_deleteService, enhance: enhance_deleteService } = superForm(deleteServiceForm);
-    const { form: form_editRefreshRate, errors: errors_editRefreshRate, constraints: constraints_editRefreshRate, message: message_editRefreshRate, enhance: enhance_editRefreshRate } = superForm(editRefreshRateForm);
-
-    $form_addService.color = '#' + (Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0');
-    $form_editRefreshRate.refreshRate = ctfConfig.refresh_rate;
-
     let toast: Toast;
+    let serviceToDelete: string | undefined = $state(undefined);
 
-    $effect(() => {
-        if (selectedFlow.flow) {
-            $form_addService.serviceIP = selectedFlow.flow.dest_ipport.split(":")[0];
-            $form_addService.ports = selectedFlow.flow.dest_ipport.split(":")[1];
+    let name = $state("");
+    let color = $state('#' + (Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0'));
+    let ipports: {
+        ip: string,
+        port: number
+    }[] = $state([{ ip: "", port: 0 }]);
+
+    async function addService(event: any) {
+        const res = await fetch("/api/config/services", {
+            method: "POST",
+            body: JSON.stringify({
+                name,
+                color,
+                ipports
+            })
+        });
+
+        if (res.ok) {
+            toast.show("success", `Service ${name} added`);
+            ctfConfig.config = await res.json();
         }
-    });
+        else {
+            toast.show("danger", `Failed to add service ${name}`, await res.text());
+        }
+    }
 
     function editService(event: any) {
-        const s = ctfConfig.services[event.currentTarget.value];
-        $form_addService.name = event.currentTarget.value;
-        $form_addService.color = s.color;
-        $form_addService.serviceIP = s.ipports[0].split(":")[0];
-        $form_addService.ports = s.ipports.map(v => v.split(":")[1]).join(", ");
+        const s = ctfConfig.config.services[event.currentTarget.value];    
+
+        name = event.currentTarget.value;
+        color = s.color;
+        ipports = s.ipports;
     }
 
     function deleteService(event: any) {
-        $form_deleteService.name = event.currentTarget.value;
+        serviceToDelete = event.currentTarget.value;
+    }
+
+    async function confirmDeleteService(event: any) {
+        const res = await fetch(`/api/config/services?name=${serviceToDelete}`, {
+            method: "DELETE"
+        });
+
+        if (res.ok) {
+            toast.show("warning", `Service ${serviceToDelete} deleted`);
+            ctfConfig.config = await res.json();
+        }
+        else {
+            toast.show("danger", `Failed to delete service ${serviceToDelete}`, await res.text())
+        }
+    }
+
+    function addIpPort(e: any) {
+        ipports.push({ ip: "", port: 0 });
+    }
+
+    function deleteIpPort(e: any) {
+        if (ipports.length > 1) {
+            ipports.splice(Number(e.currentTarget.getAttribute("data-index")), 1);
+        }
     }
 </script>
 
 <div class="card shadow-lg">
     <div class="card-header hstack">
         <h5 class="modal-title flex-grow-1">Services Manager</h5>
-        <button onclick={() => selectedPanel.view = null} type="button" class="btn-close " aria-label="Close"></button>
+        <button onclick={() => selectedPanel.view = undefined} type="button" class="btn-close " aria-label="Close"></button>
     </div>
-    <div class="card-body ">
+    <div class="card-body">
         <!-- Create/Edit service -->
-        <form action="?/addService" method="POST" use:enhance_addService>
-            <div class="row mb-4">
-                <div class="col-md-8">
-                    <label class="form-label" for="name">Service Name</label>
-                    <input type="text" name="name" class="form-control {$errors_addService.name ? "is-invalid" : ""}" bind:value={$form_addService.name} {...$constraints_addService.name} placeholder="Web server" required>
-                    <div class="invalid-feedback">{$errors_addService.name}</div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="color">Color</label>
-                    <input type="color" name="color" class="form-control {$errors_addService.color ? "is-invalid" : ""} form-control-color w-100 p-0 border-0" bind:value={$form_addService.color} {...$constraints_addService.color} required>
-                    <div class="invalid-feedback">{$errors_addService.color}</div>
-                </div>
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <label class="form-label" for="name">Service Name</label>
+                <input type="text" name="name" class="form-control" bind:value={name} placeholder="Web server" required>
             </div>
-            <div class="row mb-4">
-                <div class="col-md-8">
-                    <label class="form-label" for="serviceIP">Service IP</label>
-                    <input type="text" name="serviceIP" class="form-control {$errors_addService.serviceIP ? "is-invalid" : ""}" bind:value={$form_addService.serviceIP} {...$constraints_addService.serviceIP} placeholder="7.8.9.0" required>
-                    <div class="invalid-feedback">{$errors_addService.serviceIP}</div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="ports">Port</label>
-                    <input type="text" name="ports" class="form-control {$errors_addService.ports ? "is-invalid" : ""}" bind:value={$form_addService.ports} {...$constraints_addService.ports} placeholder="80, 443, 8080" required>
-                    <div class="invalid-feedback">{$errors_addService.ports}</div>
-                </div>
+            <div class="col-md-4">
+                <label class="form-label" for="color">Color</label>
+                <input type="color" name="color" class="form-control form-control-color w-100 p-0 border-0" bind:value={color} required>
             </div>
-            <button class="btn btn-primary w-100 mb-0" type="submit">Add Service</button>
-        </form>
-
-        <hr>
-
-        <!-- Application settings -->
-        <div class="mb-3">
-            <h6 class="text-muted mb-3">
-                <i class="bi bi-gear-fill me-2"></i>
-                Application Settings
-            </h6>
-            <label for="refreshRateInput" class="form-label">Flow list Auto-Refresh rate
-                <span class="form-text">(seconds)</span>
-            </label>
-            <form action="?/editRefreshRate" method="POST" use:enhance_editRefreshRate>
-                <div class="input-group">
-                    <input type="number" name="refreshRate" class="form-control {$errors_editRefreshRate.refreshRate ? "is-invalid" : ""}" bind:value={$form_editRefreshRate.refreshRate} {...$constraints_editRefreshRate} required>
-                    <button type="submit" class="btn btn-success">Save</button>
-                </div>
-                <div class="invalid-feedback">{$errors_editRefreshRate.refreshRate}</div>
-            </form>
         </div>
+        <div class="d-flex align-content-start flex-wrap gap-2 mb-4">
+            {#each Object.entries(ipports) as [index, ipp]}
+                <div class="input-group" style="width: 25%;">
+                    <input bind:value={ipp.ip} type="text" class="form-control" placeholder="IP" aria-label="IP" required>
+                    <span class="input-group-text">:</span>
+                    <input bind:value={ipp.port} type="number" min="0" max="65535" class="form-control" placeholder="Port" aria-label="Port" required>
+                    <button onclick={deleteIpPort} data-index={index} class="btn btn-danger" title="Delete IP:port" aria-label="Delete IP:port"><i class="bi bi-dash-lg"></i></button>
+                </div>
+            {/each}
+            <button onclick={addIpPort} class="btn btn-success" title="Add IP:port" aria-label="Add IP:port"><i class="bi bi-plus-lg"></i></button>
+        </div>
+        <button onclick={addService} class="btn btn-primary w-100">Add Service</button>
 
         <hr>
 
@@ -105,7 +108,7 @@
                 Configured Services
             </h6>
             <div class="vstack gap-2">
-                {#each Object.entries(ctfConfig.services) as [n, s]}
+                {#each Object.entries(ctfConfig.config.services) as [n, s]}
                     <div class="card p-2">
                         <div class="hstack gap-2">
                             <h5><span class="badge" style="background-color: {s.color};">{n}</span></h5>
@@ -116,7 +119,7 @@
                         </div>
                         <div class="hstack gap-2">
                             {#each s.ipports as ipport}
-                                <span class="badge text-bg-secondary">{ipport}</span>
+                                <span class="badge text-bg-secondary">{ipport.ip}:{ipport.port}</span>
                             {/each}
                         </div>
                     </div>
@@ -135,15 +138,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the service <strong>{$form_deleteService.name}</strong>?</p>
+                <p>Are you sure you want to delete the service <strong>{serviceToDelete}</strong>?</p>
                 <p class="fw-bold small">This action cannot be undone.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <form action="?/deleteService" method="POST" use:enhance_deleteService>
-                    <input type="text" name="name" bind:value={$form_deleteService.name} {...$constraints_deleteService.name} hidden>
-                    <button type="submit" class="btn btn-danger" data-bs-dismiss="modal">Delete</button>
-                </form>                
+                <button onclick={confirmDeleteService} type="submit" class="btn btn-danger" data-bs-dismiss="modal">Delete</button>
             </div>
         </div>
     </div>

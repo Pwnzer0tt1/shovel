@@ -7,6 +7,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     const filters = url.searchParams.get("filters") ?? "{}";
     const parsed = flowsListFilters.safeParse(JSON.parse(filters));
     
+    console.log(parsed);
+
     if (!parsed.success) {
         return error(400, JSON.stringify(parsed.error.issues));
     }
@@ -21,10 +23,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
                 NOT: {
                     OR: [
                         {
-                            src_ipport: { in: services.filter((v) => `${v.ip}:${v.port}`) }
+                            src_ipport: { in: services }
                         },
                         {
-                            dest_ipport: { in: services.filter((v) => `${v.ip}:${v.port}`) }
+                            dest_ipport: { in: services }
                         }
                     ]
                 }
@@ -34,10 +36,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
             fsrvs = {
                 OR: [
                     {
-                        src_ipport: { in: services.filter((v) => `${v.ip}:${v.port}`) }
+                        src_ipport: { in: services }
                     },
                     {
-                        dest_ipport: { in: services.filter((v) => `${v.ip}:${v.port}`) }
+                        dest_ipport: { in: services }
                     }
                 ]
             };
