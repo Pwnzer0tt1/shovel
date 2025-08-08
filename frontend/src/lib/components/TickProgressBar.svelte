@@ -47,9 +47,13 @@
 </script>
 
 <div class="card bg-body-tertiary p-2 shadow-lg">
-    <div class="hstack w-100 justify-content-evenly">
+    <div class="hstack w-100 gap-2">
+        <div class="btn-group" role="group" aria-label="Basic example">
+            <button type="button" class="btn btn-sm btn-outline-primary" title="Settings"><i class="bi bi-gear-fill"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-primary" title="Statistics"><i class="bi bi-activity"></i></button>
+        </div>
         <small class="fw-bold">Tick {tickInfo.tickNumber}</small>
-        <div class="col-10">
+        <div class="flex-grow-1">
             <div class="progress" role="progressbar" aria-label="Tick progress bar" aria-valuenow={progressBarValue} aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
                 <div class="progress-bar bg-{progressBarColor} progress-bar-striped progress-bar-animated" style="width: {progressBarValue}%"></div>
             </div>

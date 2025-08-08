@@ -20,8 +20,16 @@
     let protocol: string = $state("");
     let search: string = $state("");
 
-    function changeSelectedServices() {
-
+    function changeSelectedService() {
+        if (selectedService === "") {
+            flowsFilters.services = undefined;
+        }
+        else if (selectedService === "!") {
+            flowsFilters.services = [];
+        }
+        else {
+            flowsFilters.services = selectedService.split(", ");
+        }
     }
 
     function changeBeforeTick() {
@@ -54,7 +62,7 @@
 <div bind:clientHeight={sideBarHeight} class="vstack gap-2 h-100">
     <button bind:clientHeight={autoUpdateBtnHeight} title="Refresh flow list" class="btn btn-success shadow-lg">Auto-Update: ON</button>
     <div bind:clientHeight={settingsHeight} class="hstack gap-2">
-        <select class="form-select shadow-lg">
+        <select bind:value={selectedService} onchange={changeSelectedService} class="form-select shadow-lg">
             <option value="" selected>All flows</option>
             <option value="!">Flows from unknown services</option>
             {#each Object.entries(ctfConfig.config.services) as [name, service]}

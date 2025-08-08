@@ -1,4 +1,5 @@
 import { flowsListFilters } from "$lib/schema";
+import { CTF_CONFIG } from "$lib/server/config";
 import prisma from "$lib/server/prisma";
 import { error, json, type RequestHandler } from "@sveltejs/kit";
 
@@ -6,8 +7,6 @@ import { error, json, type RequestHandler } from "@sveltejs/kit";
 export const GET: RequestHandler = async ({ url, locals }) => {
     const filters = url.searchParams.get("filters") ?? "{}";
     const parsed = flowsListFilters.safeParse(JSON.parse(filters));
-    
-    console.log(parsed);
 
     if (!parsed.success) {
         return error(400, JSON.stringify(parsed.error.issues));
@@ -19,6 +18,11 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     if (services) {
         if (services.length === 0) {
             // Filter flows related to no services
+            for (const s of Object.values(CTF_CONFIG.services)) {
+                for (const ipp of s.ipports) {
+                    services.push(`${ipp.ip}:${ipp.port}`);
+                }
+            }
             fsrvs = {
                 NOT: {
                     OR: [
