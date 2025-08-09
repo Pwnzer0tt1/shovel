@@ -5,11 +5,11 @@
 
     let { index, flow, tags }: { index: number, flow: Flow, tags: Tags } = $props();
     
-    const delay = (Number(flow.ts_end) - Number(flow.ts_start)) / 1000;
-    const time = new Date(Number(flow.ts_start) / 1000).toISOString().split("T")[1];
+    const delay = $derived((Number(flow.ts_end) - Number(flow.ts_start)) / 1000);
+    const time = $derived(new Date(Number(flow.ts_start) / 1000).toISOString().split("T")[1]);
     
-    const flowTags = (flow.alerts ?? []).map((v) => v.tag);
-    const appProto = flow.app_proto ? flow.app_proto.replace("failed", "raw") : "raw";
+    const flowTags = $derived((flow.alerts ?? []).map((v) => v.tag));
+    const appProto = $derived(flow.app_proto ?? "failed");
 
     let btn: HTMLButtonElement;
 

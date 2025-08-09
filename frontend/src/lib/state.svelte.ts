@@ -1,4 +1,4 @@
-import type { CtfConfig, Flow, FlowsListFilters } from "./schema";
+import type { CtfConfig, Flow, Flows, FlowsListFilters } from "./schema";
 
 
 export const selectedFlow: { 
@@ -21,7 +21,7 @@ export const tickInfo: {
     tickNumber: 0
 });
 
-export const flowsFilters: FlowsListFilters = $state({ ts_to: String(1e16) });
+export const flowsFilters: FlowsListFilters = $state({ ts_to: String(1e16), tags_require: [], tags_deny: [] });
 
 export const ctfConfig: {
     config: CtfConfig
@@ -32,4 +32,10 @@ export const ctfConfig: {
         refresh_rate: 60,
         services: {}
     }
+});
+
+export const flows: {
+    flows: Flows
+} = $state({
+    flows: []
 });

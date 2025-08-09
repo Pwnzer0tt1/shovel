@@ -18,15 +18,7 @@
     let endIndex: number | undefined = undefined;
     let shiftPressed = false;
 
-    function shiftDown(e: KeyboardEvent) {
-        if (e.target) {
-            let el = e.target as HTMLElement;
-            if (el.tagName !== "INPUT" && !e.repeat && !e.ctrlKey) {
-                shiftPressed = e.shiftKey;
-            }
-        }
-    }
-    function shiftUp(e: KeyboardEvent) {
+    function shiftChange(e: KeyboardEvent) {
         if (e.target) {
             let el = e.target as HTMLElement;
             if (el.tagName !== "INPUT" && !e.repeat && !e.ctrlKey) {
@@ -160,7 +152,7 @@
     }
 </script>
 
-<svelte:document onkeydown={shiftDown} onkeyup={shiftUp} />
+<svelte:document onkeydown={shiftChange} onkeyup={shiftChange} />
 
 <div class="d-flex gap-3 text-light" style="background-color: #353535;">
     <div style="background-color: #545454;">

@@ -4,8 +4,8 @@
 	import SideBar from '$lib/components/SideBar.svelte';
 	import TickProgressBar from '$lib/components/TickProgressBar.svelte';
 	import WelcomePanel from '$lib/components/WelcomePanel.svelte';
-	import type { Flows, Tags } from '$lib/schema';
-	import { ctfConfig, flowsFilters, selectedFlow, selectedPanel } from '$lib/state.svelte.js';
+	import type { Tags } from '$lib/schema';
+	import { ctfConfig, flows, flowsFilters, selectedFlow, selectedPanel } from '$lib/state.svelte.js';
 	import { onMount } from 'svelte';
 
     let { data } = $props();
@@ -16,7 +16,6 @@
     let tickProgressBarHeight = $state(0);
     let panelsHeight = $derived(innerHeight - tickProgressBarHeight);
 
-    let flows: Flows = $state([]);
     let tags: Tags = $state([]);
     let appProto: string[] = $state([]);
 
@@ -27,7 +26,7 @@
         let res = await fetch(`/api/flow?filters=${JSON.stringify(flowsFilters)}`);
         let json = await res.json();
 
-        flows = json.flows;
+        flows.flows = json.flows;
         tags = json.tags;
         appProto = json.appProto;
     }
@@ -40,24 +39,24 @@
                     case "ArrowLeft":
                         if (selectedFlow.flow) {
                             if (selectedFlow.flowIndex > 0) {
-                                selectedFlow.flow = flows.at(selectedFlow.flowIndex - 1);
+                                selectedFlow.flow = flows.flows.at(selectedFlow.flowIndex - 1);
                                 selectedFlow.flowIndex -= 1;
                             }
                         }
                         else {
-                            selectedFlow.flow = flows.at(0);
+                            selectedFlow.flow = flows.flows.at(0);
                             selectedFlow.flowIndex = 0;
                         }
                         break;
                     case "ArrowRight":
                         if (selectedFlow.flow) {
-                            if (selectedFlow.flowIndex < flows.length - 1) {
-                                selectedFlow.flow = flows.at(selectedFlow.flowIndex + 1);
+                            if (selectedFlow.flowIndex < flows.flows.length - 1) {
+                                selectedFlow.flow = flows.flows.at(selectedFlow.flowIndex + 1);
                                 selectedFlow.flowIndex += 1;
                             }
                         }
                         else {
-                            selectedFlow.flow = flows.at(0);
+                            selectedFlow.flow = flows.flows.at(0);
                             selectedFlow.flowIndex = 0;
                         }
                         break;
@@ -76,6 +75,8 @@
 
     $effect(() => {
         if (flowsFilters) {
+            selectedFlow.flow = undefined;
+            selectedFlow.flowIndex = -1;
             getFlowsList();
         }
     });
@@ -97,7 +98,7 @@
     <div class="hstack gap-2 pb-2" style="height: {panelsHeight}px;">
         <div class="pb-3 h-100">
             <!-- Side bar -->
-            <SideBar flows={flows} tags={tags} appProto={appProto} />
+            <SideBar tags={tags} appProto={appProto} />
         </div>
         <div class="col-9 h-100 overflow-y-auto pe-2">
             {#if selectedPanel.view === "ServicesManager"}

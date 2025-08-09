@@ -209,7 +209,6 @@
 {#await flowData}
     Loading...
 {:then flowData}
-    {@debug flowData}
     <div class="vstack gap-3">
         <!-- Flow card -->
         <div class="hstack gap-2 align-items-stretch">
@@ -337,7 +336,6 @@
         {#await rawFlowData}
             Loading...
         {:then rawFlowData}
-            {@debug rawFlowData}
             {#if (flowData.proto === "TCP" || flowData.proto === "UDP") && flowData.flowEstablished}
                 <div class="accordion" id="accordion-raw">
                     <div class="accordion-item border-primary shadow-lg">

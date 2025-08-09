@@ -5,7 +5,7 @@ import { error, json, type RequestHandler } from "@sveltejs/kit";
 
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-    const filters = url.searchParams.get("filters") ?? "{}";
+    const filters = url.searchParams.get("filters") ?? "{\"ts_to\":\"10000000000000000\",\"tags_require\":[],\"tags_deny\":[]}";
     const parsed = flowsListFilters.safeParse(JSON.parse(filters));
 
     if (!parsed.success) {
@@ -51,32 +51,27 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     }
     
     let ftags_deny = {};
-    if (tags_deny) {
-        if (tags_deny.length > 0) {
-            ftags_deny = {
-                NOT: {
-                    alerts: {
-                        every: {
-                            tag: { in: tags_deny }
-                        }
+    if (tags_deny.length > 0) {
+        ftags_deny = {
+            NOT: {
+                alerts: {
+                    some: {
+                        tag: { in: tags_deny }
                     }
                 }
-            };
-        }
+            }
+        };
     }
 
     let ftags_req = {};
-    if (tags_require) {
-        if (tags_require.length > 0) {
-            
-            ftags_req = {
-                alerts: {
-                    every: {
-                        tag: { in: tags_require }
-                    }
+    if (tags_require.length > 0) {        
+        ftags_req = {
+            alerts: {
+                some: {
+                    tag: { in: tags_require }
                 }
-            };
-        }
+            }
+        };
     }
 
     let search_fid = {};
@@ -106,14 +101,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
         where: {
             AND: [
                 {
-                    ts_start: {
-                        lte: Number(ts_to)
-                    }
+                    ts_start: { lte: Number(ts_to) }
                 },
                 {
-                    app_proto: {
-                        equals: app_proto === "raw" ? "failed" : app_proto
-                    }
+                    app_proto: { equals: app_proto }
                 },
                 fsrvs,
                 ftags_deny,

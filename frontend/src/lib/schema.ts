@@ -6,8 +6,8 @@ export const flowsListFilters = z.object({
     services: z.array(z.string()).optional(),
     app_proto: z.string().optional(),
     search: z.string().optional(),
-    tags_require: z.array(z.string()).optional(),
-    tags_deny: z.array(z.string()).optional()
+    tags_require: z.array(z.string()),
+    tags_deny: z.array(z.string())
 });
 
 export type FlowsListFilters = z.infer<typeof flowsListFilters>;
