@@ -88,7 +88,7 @@
 
         const dateStart = json.flow.extra_data?.start.split("T").join(", ");
         const dateEnd = json.flow.extra_data?.end.split("T").join(", ");
-        const start_ts = Math.floor(Date.parse(ctfConfig.config.start_date) / 1000);
+        const start_ts = Math.floor(Date.parse(ctfConfig.config.start_date + "Z") / 1000);
         const tick = ((Number(json.flow.ts_start) / 1000000 - start_ts) / ctfConfig.config.tick_length).toFixed(3);
 
         let fileinfos: {

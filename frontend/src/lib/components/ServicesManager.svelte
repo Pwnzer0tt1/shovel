@@ -69,7 +69,7 @@
     }
 </script>
 
-<div class="card shadow-lg">
+<div class="card shadow-lg h-100">
     <div class="card-header hstack">
         <h5 class="modal-title flex-grow-1">Services Manager</h5>
         <button onclick={() => selectedPanel.view = undefined} type="button" class="btn-close " aria-label="Close"></button>

@@ -10,7 +10,7 @@ import fs from "node:fs";
 export function loadConfig(path = "./services_config.json") {
     if (!fs.existsSync(path)) {
         return {
-            start_date: "1970-01-01T00:00+00:00",
+            start_date: new Date().toISOString().slice(0, -8),
             tick_length: 120,
             refresh_rate: 120,
             services: {}
@@ -24,7 +24,7 @@ export function loadConfig(path = "./services_config.json") {
     catch (e) {
         console.error("Error parsing services config, returning default values.");
         return {
-            start_date: "1970-01-01T00:00+00:00",
+            start_date: new Date().toISOString().slice(0, -8),
             tick_length: 120,
             refresh_rate: 120,
             services: {}

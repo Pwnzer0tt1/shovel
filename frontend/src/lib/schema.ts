@@ -67,7 +67,7 @@ export type Tags = Tag[];
 export const flowId = z.bigint();
 
 export const ctfConfig = z.object({
-    start_date: z.string(),
+    start_date: z.iso.datetime({ local: true }),
     tick_length: z.number(),
     refresh_rate: z.number(),
     services: z.record(z.string(), z.object({
@@ -80,6 +80,15 @@ export const ctfConfig = z.object({
 });
 
 export type CtfConfig = z.infer<typeof ctfConfig>;
+
+export const newCtfConfig = z.object({
+    start_date: z.iso.datetime({ local: true }),
+    tick_length: z.int().min(1),
+    refresh_rate: z.int().min(1)
+});
+
+export type NewCtfConfig = z.infer<typeof newCtfConfig>;
+
 
 export const addService = z.object({
     name: z.string(),

@@ -1,7 +1,9 @@
 <script lang="ts">
 	import FlowDisplay from '$lib/components/FlowDisplay.svelte';
 	import ServicesManager from '$lib/components/ServicesManager.svelte';
+	import Settings from '$lib/components/Settings.svelte';
 	import SideBar from '$lib/components/SideBar.svelte';
+	import Stats from '$lib/components/Stats.svelte';
 	import TickProgressBar from '$lib/components/TickProgressBar.svelte';
 	import WelcomePanel from '$lib/components/WelcomePanel.svelte';
 	import type { Tags } from '$lib/schema';
@@ -19,7 +21,7 @@
     let tags: Tags = $state([]);
     let appProto: string[] = $state([]);
 
-    let flowsListInterval;
+    let flowsListInterval: string | number | NodeJS.Timeout | undefined;
 
 
     async function getFlowsList() {
@@ -73,6 +75,7 @@
         }
     }
 
+    // Fetch new flows when filters are changed
     $effect(() => {
         if (flowsFilters) {
             selectedFlow.flow = undefined;
@@ -81,12 +84,18 @@
         }
     });
 
+    // Reset interval for flows fetching on refresh rate updates
+    $effect(() => {
+        clearInterval(flowsListInterval);
+        flowsListInterval = setInterval(async () => {
+            if (ctfConfig.autoUpdate) {
+                getFlowsList();
+            }
+        }, ctfConfig.config.refresh_rate * 1000);
+    });
+
     onMount(() => {
         getFlowsList();
-
-        flowsListInterval = setInterval(async () => {
-            getFlowsList();
-        }, data.ctfConfig.refresh_rate * 1000);
     });
 </script>
 
@@ -100,10 +109,14 @@
             <!-- Side bar -->
             <SideBar tags={tags} appProto={appProto} />
         </div>
-        <div class="col-9 h-100 overflow-y-auto pe-2">
+        <div class="col-9 h-100 overflow-y-auto">
             {#if selectedPanel.view === "ServicesManager"}
                 <!-- Manage services -->
                 <ServicesManager />
+            {:else if selectedPanel.view === "Settings"}
+                <Settings />
+            {:else if selectedPanel.view === "Stats"}
+                <Stats />
             {:else}
                 {#if selectedFlow.flow}
                     <!-- Flow display -->
@@ -115,8 +128,12 @@
             {/if}
         </div>
     </div>
-    <div class="fixed-bottom p-2" bind:clientHeight={tickProgressBarHeight}>
+    <div class="fixed-bottom p-2 hstack gap-2" bind:clientHeight={tickProgressBarHeight}>
         <!-- Progress bar per tick -->
-        <TickProgressBar startTs={Math.floor(Date.parse(data.ctfConfig.start_date) / 1000)} tickLength={data.ctfConfig.tick_length} />
+        <TickProgressBar />
+        <div class="btn-group" role="group" aria-label="Basic example">
+            <button onclick={() => selectedPanel.view = "Settings"} type="button" class="btn btn-primary" title="Settings" aria-label="Settings"><i class="bi bi-gear-fill"></i></button>
+            <button onclick={() => selectedPanel.view = "Stats"} type="button" class="btn btn-primary" title="Statistics" aria-label="Statistics"><i class="bi bi-activity"></i></button>
+        </div>
     </div>
 </div>

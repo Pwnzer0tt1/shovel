@@ -105,7 +105,7 @@
 <svelte:window bind:innerHeight onkeydown={shiftChange} onkeyup={shiftChange} />
 
 <div bind:clientHeight={sideBarHeight} class="vstack gap-2 h-100">
-    <button bind:clientHeight={autoUpdateBtnHeight} title="Refresh flow list" class="btn btn-success shadow-lg">Auto-Update: ON</button>
+    <button bind:clientHeight={autoUpdateBtnHeight} onclick={() => ctfConfig.autoUpdate = !ctfConfig.autoUpdate} title="Refresh flow list" class="btn btn-{ctfConfig.autoUpdate ? "success" : "danger"} shadow-lg">Auto-Update: {ctfConfig.autoUpdate ? "ON" : "OFF"}</button>
     <div bind:clientHeight={settingsHeight} class="hstack gap-2">
         <select bind:value={selectedService} onchange={changeSelectedService} class="form-select shadow-lg">
             <option value="" selected>All flows</option>

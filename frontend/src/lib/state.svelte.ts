@@ -10,7 +10,7 @@ export const selectedFlow: {
 });
 
 export const selectedPanel: {
-    view: "ServicesManager" | undefined
+    view: "ServicesManager" | "Settings" | "Stats" | undefined
 } = $state({
     view: undefined
 });
@@ -24,14 +24,16 @@ export const tickInfo: {
 export const flowsFilters: FlowsListFilters = $state({ ts_to: String(1e16), tags_require: [], tags_deny: [] });
 
 export const ctfConfig: {
-    config: CtfConfig
+    config: CtfConfig,
+    autoUpdate: boolean
 } = $state({
     config: {
-        start_date: "",
+        start_date: new Date().toISOString(),
         tick_length: 120,
         refresh_rate: 60,
         services: {}
-    }
+    },
+    autoUpdate: true
 });
 
 export const flows: {

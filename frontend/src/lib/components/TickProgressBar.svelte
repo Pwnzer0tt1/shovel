@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { tickInfo } from "$lib/state.svelte";
+	import { ctfConfig, tickInfo } from "$lib/state.svelte";
 	import { onMount } from "svelte";
 
-    let { startTs, tickLength }: {
-        startTs: number,
-        tickLength: number
-    } = $props();
+
+    let startTs = $derived(Math.floor(Date.parse(ctfConfig.config.start_date + "Z") / 1000));
+    let tickLength = $derived(ctfConfig.config.tick_length);
 
     let progressBarValue = $state(0);
     let tickTimer = $state("00:00");
@@ -46,12 +45,8 @@
     });
 </script>
 
-<div class="card bg-body-tertiary p-2 shadow-lg">
+<div class="card bg-body-tertiary p-2 shadow-lg w-100">
     <div class="hstack w-100 gap-2">
-        <div class="btn-group" role="group" aria-label="Basic example">
-            <button type="button" class="btn btn-sm btn-outline-primary" title="Settings"><i class="bi bi-gear-fill"></i></button>
-            <button type="button" class="btn btn-sm btn-outline-primary" title="Statistics"><i class="bi bi-activity"></i></button>
-        </div>
         <small class="fw-bold">Tick {tickInfo.tickNumber}</small>
         <div class="flex-grow-1">
             <div class="progress" role="progressbar" aria-label="Tick progress bar" aria-valuenow={progressBarValue} aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
