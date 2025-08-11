@@ -25,15 +25,20 @@ export const flowsFilters: FlowsListFilters = $state({ ts_to: String(1e16), tags
 
 export const ctfConfig: {
     config: CtfConfig,
-    autoUpdate: boolean
+    autoUpdate: boolean,
+    ctfEnded: boolean,
+    hideSideBar: boolean
 } = $state({
     config: {
         start_date: new Date().toISOString(),
+        end_date: new Date().toISOString(),
         tick_length: 120,
         refresh_rate: 60,
         services: {}
     },
-    autoUpdate: true
+    autoUpdate: true,
+    ctfEnded: false,
+    hideSideBar: false
 });
 
 export const flows: {

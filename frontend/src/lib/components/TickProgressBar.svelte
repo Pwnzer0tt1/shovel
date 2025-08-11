@@ -11,7 +11,9 @@
     let progressBarColor = $state("success");
 
     function updateProgressBar() {
-        const now = Date.now() / 1000;
+        ctfConfig.ctfEnded = Date.now() > Date.parse(ctfConfig.config.end_date);
+
+        const now = ctfConfig.ctfEnded ? Date.parse(ctfConfig.config.end_date) / 1000 : Date.now() / 1000;
         const currentTick = Math.floor((now - startTs) / tickLength);
         const tickStartTime = startTs + (currentTick * tickLength);
         const tickEndTime = tickStartTime + tickLength;

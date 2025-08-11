@@ -9,8 +9,11 @@ import fs from "node:fs";
  */
 export function loadConfig(path = "./services_config.json") {
     if (!fs.existsSync(path)) {
+        let end_date = new Date();
+        end_date.setTime(end_date.getTime() + 8 * 60 * 60 * 1000)
         return {
             start_date: new Date().toISOString().slice(0, -8),
+            end_date: end_date.toISOString().slice(0, -8),
             tick_length: 120,
             refresh_rate: 120,
             services: {}
@@ -23,8 +26,11 @@ export function loadConfig(path = "./services_config.json") {
     }
     catch (e) {
         console.error("Error parsing services config, returning default values.");
+        let end_date = new Date();
+        end_date.setTime(end_date.getTime() + 8 * 60 * 60 * 1000)
         return {
             start_date: new Date().toISOString().slice(0, -8),
+            end_date: end_date.toISOString().slice(0, -8),
             tick_length: 120,
             refresh_rate: 120,
             services: {}

@@ -69,6 +69,7 @@
                         else {
                             selectedFlow.flow = undefined;
                         }
+                        ctfConfig.hideSideBar = false;
                         break;
                 }
             }
@@ -105,11 +106,13 @@
 
 <div class="vstack vh-100 p-2">
     <div class="hstack gap-2 pb-2" style="height: {panelsHeight}px;">
-        <div class="pb-3 h-100">
-            <!-- Side bar -->
-            <SideBar tags={tags} appProto={appProto} />
-        </div>
-        <div class="col-9 h-100 overflow-y-auto">
+        {#if !ctfConfig.hideSideBar}
+            <div class="pb-3 h-100">
+                <!-- Side bar -->
+                <SideBar tags={tags} appProto={appProto} />
+            </div>
+        {/if}
+        <div class="col-{ctfConfig.hideSideBar ? "12" : "9"} h-100 overflow-y-auto">
             {#if selectedPanel.view === "ServicesManager"}
                 <!-- Manage services -->
                 <ServicesManager />
@@ -131,6 +134,9 @@
     <div class="fixed-bottom p-2 hstack gap-2" bind:clientHeight={tickProgressBarHeight}>
         <!-- Progress bar per tick -->
         <TickProgressBar />
+        {#if ctfConfig.ctfEnded}
+            <button class="col-2 btn btn-outline-danger">CTF ENDED</button>
+        {/if}
         <div class="btn-group" role="group" aria-label="Basic example">
             <button onclick={() => selectedPanel.view = "Settings"} type="button" class="btn btn-primary" title="Settings" aria-label="Settings"><i class="bi bi-gear-fill"></i></button>
             <button onclick={() => selectedPanel.view = "Stats"} type="button" class="btn btn-primary" title="Statistics" aria-label="Statistics"><i class="bi bi-activity"></i></button>

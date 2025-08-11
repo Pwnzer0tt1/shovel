@@ -222,7 +222,18 @@
                 <p class="my-0"><i class="bi bi-arrow-right"></i> {flowData.pktsToServer} packets ({flowData.bytesToServer} bytes)</p>
                 <p class="my-0"><i class="bi bi-arrow-left"></i> {flowData.pktsToClient} packets ({flowData.bytesToClient} bytes)</p>
             </div>
-            <a href={flowData.pcapFilename.slice(1, -1)} download={flowData.pcapFilename.slice(1, -1).split("/")[2]} class="btn btn-success shadow-lg d-flex align-items-center" aria-label="Download pcap"><i class="bi bi-file-earmark-arrow-down-fill"></i></a>
+            <div class="d-flex align-items-stretch">
+                <div class="btn-group-vertical" role="group" aria-label="Vertical button group">
+                    <button onclick={() => ctfConfig.hideSideBar = !ctfConfig.hideSideBar} class="btn btn-outline-primary" aria-label="Fullscreen">
+                        {#if ctfConfig.hideSideBar}
+                            <i class="bi bi-fullscreen-exit"></i>
+                        {:else}
+                            <i class="bi bi-fullscreen"></i>
+                        {/if}
+                    </button>
+                    <a href={flowData.pcapFilename.slice(1, -1)} download={flowData.pcapFilename.slice(1, -1).split("/")[2]} class="btn btn-success shadow-lg" aria-label="Download pcap"><i class="bi bi-file-earmark-arrow-down-fill"></i></a>
+                </div>
+            </div>
         </div>
 
         <!-- Alerts -->

@@ -14,7 +14,12 @@ export const POST: RequestHandler = async ({ request }) => {
         return error(400, { message: JSON.stringify(res.error.issues) });
     }
 
+    if (Date.parse(res.data.end_date) <= Date.parse(res.data.start_date)) {
+        return error(400, { message: "The CTF end datetime must be AFTER the start datetime." });
+    }
+
     CTF_CONFIG.start_date = res.data.start_date;
+    CTF_CONFIG.end_date = res.data.end_date;
     CTF_CONFIG.tick_length = res.data.tick_length;
     CTF_CONFIG.refresh_rate = res.data.refresh_rate;
 
