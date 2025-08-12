@@ -69,7 +69,7 @@
     }
 </script>
 
-<div class="card shadow-lg h-100">
+<div class="card shadow-lg h-100 overflow-auto">
     <div class="card-header hstack">
         <h5 class="modal-title flex-grow-1">Services Manager</h5>
         <button onclick={() => selectedPanel.view = undefined} type="button" class="btn-close " aria-label="Close"></button>
@@ -102,29 +102,24 @@
         <hr>
 
         <!-- Services list -->
-        <div class="configured-services-section">
-            <h6 class="text-muted mb-3">
-                <i class="bi bi-list-ul me-2"></i>
-                Configured Services
-            </h6>
-            <div class="vstack gap-2">
-                {#each Object.entries(ctfConfig.config.services) as [n, s]}
-                    <div class="card p-2">
-                        <div class="hstack gap-2">
-                            <h5><span class="badge" style="background-color: {s.color};">{n}</span></h5>
-                            <div class="btn-group ms-auto" role="group" aria-label="Service actions">
-                                <button onclick={editService} value={n} type="button" class="btn btn-success" aria-label="Edit service"><i class="bi bi-pencil-fill"></i></button>
-                                <button onclick={deleteService} value={n} type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" aria-label="Delete service"><i class="bi bi-trash3-fill"></i></button>
-                            </div>
-                        </div>
-                        <div class="hstack gap-2">
-                            {#each s.ipports as ipport}
-                                <span class="badge text-bg-secondary">{ipport.ip}:{ipport.port}</span>
-                            {/each}
+        <h6 class="text-muted mb-3"><i class="bi bi-list-ul me-2"></i> Configured Services</h6>
+        <div class="vstack gap-2">
+            {#each Object.entries(ctfConfig.config.services) as [n, s]}
+                <div class="card p-2">
+                    <div class="hstack gap-2">
+                        <h5><span class="badge" style="background-color: {s.color};">{n}</span></h5>
+                        <div class="btn-group ms-auto" role="group" aria-label="Service actions">
+                            <button onclick={editService} value={n} type="button" class="btn btn-success" aria-label="Edit service"><i class="bi bi-pencil-fill"></i></button>
+                            <button onclick={deleteService} value={n} type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" aria-label="Delete service"><i class="bi bi-trash3-fill"></i></button>
                         </div>
                     </div>
-                {/each}
-            </div>
+                    <div class="hstack gap-2">
+                        {#each s.ipports as ipport}
+                            <span class="badge text-bg-secondary">{ipport.ip}:{ipport.port}</span>
+                        {/each}
+                    </div>
+                </div>
+            {/each}
         </div>
     </div>
 </div>

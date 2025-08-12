@@ -3,6 +3,8 @@
 	import { ctfConfig, selectedFlow } from "$lib/state.svelte";
 	import TextViewer from "./TextViewer.svelte";
 	import HexDumpViewer from "./HexDumpViewer.svelte";
+	import HttpReplay from "./HttpReplay.svelte";
+	import RawReplay from "./RawReplay.svelte";
     
 
     let appDataActiveView: "render" | "utf8" | "hex" = $state("render");
@@ -137,6 +139,8 @@
         }
 
         return {
+            flowId: json.flow.id,
+            flow: json.flow,
             dateStart,
             dateEnd,
             tick,
@@ -278,7 +282,7 @@
                                     <input value="hex" onchange={changeAppDataView} type="radio" class="btn-check" name="appviewbtnradio" id="app-data-btn-hex" autocomplete="off"  checked={appDataActiveView === "hex"}>
                                     <label class="btn btn-outline-primary" for="app-data-btn-hex">Hex</label>
                                 </div>
-                                <a class="ms-auto" href="/">Generate script</a>
+                                <button class="ms-auto btn btn-primary" data-bs-toggle="modal" data-bs-target="#app-replay-script" aria-label="Generate script">Generate script</button>
                             </div>
                             <hr>
                             <div class="vstack gap-4">
@@ -363,7 +367,7 @@
                                         <input value="hex" onchange={changeRawDataView} type="radio" class="btn-check" name="rawviewbtnradio" id="raw-data-btn-hex" autocomplete="off" checked={rawDataActiveView === "hex"}>
                                         <label class="btn btn-outline-primary" for="raw-data-btn-hex">Hex</label>
                                     </div>
-                                    <a class="ms-auto" href="/">Generate script</a>
+                                    <button class="ms-auto btn btn-primary" data-bs-toggle="modal" data-bs-target="#raw-replay-script" aria-label="Generate script">Generate script</button>
                                 </div>
                                 <hr>
                                 <div class="vstack gap-3 mt-3">
@@ -381,6 +385,40 @@
                     </div>
                 </div>
             {/if}
+
+            <!-- Raw replay script -->
+            <div class="modal fade" id="raw-replay-script" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="exampleModalLabel">Raw protocol script</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <RawReplay ipport={flowData.dstIpPort} data={flowData.flow} raw={rawFlowData.raw} />
+                        </div>
+                    </div>
+                </div>
+            </div>
         {/await}
+    </div>
+
+    <!-- App replay script -->
+    <div class="modal fade" id="app-replay-script" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">App protocol script</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    {#if flowData.appProto === "http" || flowData.appProto === "http2"}
+                        <HttpReplay flowId={flowData.flowId} ipport={flowData.dstIpPort} data={flowData.flowAppProto} />
+                    {:else}
+                        <p>Script generation not implemented for this application protocol.</p>
+                    {/if}
+                </div>
+            </div>
+        </div>
     </div>
 {/await}
