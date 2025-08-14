@@ -5,6 +5,7 @@ use diesel::{Connection, ConnectionError, PgConnection, QueryResult, RunQueryDsl
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::{thread, time};
 
 use crate::models::{NewAlert, NewAnomaly, NewAppEvent, NewFileinfo, NewFlow};
 use crate::schema::{alert, anomaly, app_event, fileinfo, flow};
@@ -170,6 +171,9 @@ impl Database {
         url: String,
         rx: std::sync::mpsc::Receiver<String>,
     ) -> Result<Self, ConnectionError> {
+        // Lazy, ait for PostgreSQL container to start
+        thread::sleep(time::Duration::from_secs(5));
+
         let mut conn = PgConnection::establish(&url)?;
         conn.run_pending_migrations(MIGRATIONS).unwrap();
 

@@ -14,13 +14,24 @@ function setup (args)
     SCLogNotice("Initializing plugin TCP payload PostgreSQL Output; author=ANSSI; license=GPL-2.0")
 
     -- Open database connection
-    luasql = require("luasql.postgres")
-    env = assert(luasql.postgres())
-    con = assert(env:connect("postgres", "postgres", "", "postgres"))
+    pgmoon = require("pgmoon")
+    pg = pgmoon.new({
+        host = "postgres",
+        port = "5432",
+        database = "postgres",
+        user = "postgres"
+    })
+    assert(pg:connect())
 
     -- packer counter for each flow
     flow_pkt_count = {}
     flow_pkt_count_total = 0
+end
+
+encode_bytea = function(str)
+  return string.format("%s", str:gsub('.', function(byte)
+    return string.format('%02x', string.byte(byte))
+  end))
 end
 
 function log (args)
@@ -37,12 +48,12 @@ function log (args)
     if #data == 0 then
         return
     end
-    local direction = "0"
+    local direction = 0
     if sb_tc then
-        direction = "1"
+        direction = 1
     end
 
-    assert(con:execute(string.format([[INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES (%s, %s, %s, '%s'::bytea) ON CONFLICT (id) DO NOTHING;]], flow_id, count, direction, con:escape(data))))
+    assert(pg:query("INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES ($1, $2, $3, decode($4, 'hex')) ON CONFLICT (id) DO NOTHING;", flow_id, count, direction, encode_bytea(data)))
 end
 
 function deinit (args)
