@@ -15,12 +15,12 @@ fi
 # see https://github.com/OISF/suricata/blob/suricata-7.0.5/suricata.yaml.in
 eval "$SURICATA_CMD" \
     --runmode=single --no-random -k none \
-    -S suricata/rules/suricata.rules \
     -l suricata/output \
-    --set plugins.0=suricata/libeve_sqlite_output.so \
+    --set default-rule-path=suricata/rules \
+    --set plugins.0=suricata/libeve_postgres_output.so \
     --set outputs.0.fast.enabled=no \
     --set outputs.1.eve-log.filetype=sqlite \
-    --set outputs.1.eve-log.pcap-file=${PCAP_FILE:=true} \
+    --set outputs.1.eve-log.pcap-file="${PCAP_FILE:=true}" \
     --set outputs.1.eve-log.types.3.http.dump-all-headers=both \
     --set outputs.1.eve-log.types.6.files.force-hash.0=sha256 \
     --set outputs.1.eve-log.types.21.dhcp.extended=yes \
@@ -32,8 +32,8 @@ eval "$SURICATA_CMD" \
     --set outputs.9.file-store.force-filestore=yes \
     --set outputs.9.file-store.stream-depth=0 \
     --set outputs.12.lua.enabled=yes \
-    --set outputs.12.lua.scripts.0=suricata/suricata-tcp-payload-sqlite-output.lua \
-    --set outputs.12.lua.scripts.1=suricata/suricata-udp-payload-sqlite-output.lua \
+    --set outputs.12.lua.scripts.0=suricata/suricata-tcp-payload-postgres-output.lua \
+    --set outputs.12.lua.scripts.1=suricata/suricata-udp-payload-postgres-output.lua \
     --set app-layer.protocols.pgsql.enabled=yes \
     --set app-layer.protocols.modbus.enabled=yes \
     --set app-layer.protocols.dnp3.enabled=yes \

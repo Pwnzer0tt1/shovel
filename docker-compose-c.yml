@@ -1,9 +1,10 @@
 # Copyright (C) 2024  ANSSI
 # SPDX-License-Identifier: CC0-1.0
+name: digger
+
 services:
   suricata:
     build: ./suricata
-    image: anssi/shovel-suricata:dev
     volumes:
       - "./input_pcaps:/input_pcaps:ro"
       - "./suricata/rules:/suricata/rules:ro"
@@ -18,18 +19,15 @@ services:
     environment:
       - PCAP_OVER_IP=pcap-broker:4242
 
-  webapp:
-    build: ./webapp
-    image: anssi/shovel-webapp:dev
+  frontend:
+    build: ./frontend
     restart: always
     volumes:
       - "./input_pcaps:/input_pcaps:ro" # remove to prevent users from downloading pcaps
       - "./suricata/output:/suricata/output:rw"
       - "./services_config.json:/webapp/services_config.json:rw"
     ports:
-      - 0.0.0.0:8000:8000
-    env_file:
-      - .env
+      - 0.0.0.0:3000:3000
 
   pcap-broker:
     container_name: pcap-broker-op
@@ -61,3 +59,15 @@ services:
     volumes:
       - ./tshark/dumps:/dump-pcap
     entrypoint: docker-entrypoint.sh
+
+  postgres:
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+
+volumes:
+  pgdata:
