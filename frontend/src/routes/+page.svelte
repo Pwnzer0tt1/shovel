@@ -135,7 +135,7 @@
         <!-- Progress bar per tick -->
         <TickProgressBar />
         {#if ctfConfig.ctfEnded}
-            <button class="col-2 btn btn-outline-danger">CTF ENDED</button>
+            <button class="col-2 btn btn-outline-danger">THE CTF IS OVER</button>
         {/if}
         <div class="btn-group" role="group" aria-label="Basic example">
             <button onclick={() => selectedPanel.view = "Settings"} type="button" class="btn btn-primary" title="Settings" aria-label="Settings"><i class="bi bi-gear-fill"></i></button>
