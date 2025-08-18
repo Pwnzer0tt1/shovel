@@ -20,7 +20,10 @@
                 name,
                 color,
                 ipports
-            })
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
         });
 
         if (res.ok) {

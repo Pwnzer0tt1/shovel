@@ -17,7 +17,10 @@
                 end_date,
                 tick_length,
                 refresh_rate
-            })
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
         });
 
         if (res.ok) {
