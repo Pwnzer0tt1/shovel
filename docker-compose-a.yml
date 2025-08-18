@@ -1,9 +1,10 @@
 # Copyright (C) 2024  ANSSI
 # SPDX-License-Identifier: CC0-1.0
+name: digger
+
 services:
   suricata:
     build: ./suricata
-    image: anssi/shovel-suricata:dev
     volumes:
       - "./input_pcaps:/input_pcaps:rw"
       - "./suricata/rules:/suricata/rules:ro"
@@ -13,14 +14,23 @@ services:
     # Add `--pcap-file-continuous` to watch for new pcap in folder.
     command: -r /input_pcaps --pcap-file-continuous
 
-  webapp:
-    build: ./webapp
-    image: anssi/shovel-webapp:dev
+  frontend:
+    build: ./frontend
     restart: always
     volumes:
       - "./input_pcaps:/input_pcaps:ro" # remove to prevent users from downloading pcaps
-      - "./suricata/output:/suricata/output:rw"
+      - "./suricata/output:/suricata/output:ro"
     ports:
-      - 0.0.0.0:8000:8000
-    env_file:
-      - .env
+      - 0.0.0.0:3000:3000
+
+  postgres:
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+
+volumes:
+  pgdata:
