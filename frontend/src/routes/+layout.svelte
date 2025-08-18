@@ -1,4 +1,22 @@
 <script lang="ts">
+    // Bootrstrap CSS
+    import "bootstrap/dist/css/bootstrap.min.css";
+    // Bottstrap Icons
+    import "bootstrap-icons/font/bootstrap-icons.min.css";
+    // Bootrstrap JS
+    import scriptSrc from "bootstrap/dist/js/bootstrap.bundle.min.js?url";
+
+    // Ace
+    import "ace-builds/src-min-noconflict/ace.js";
+    import "ace-builds/src-min-noconflict/theme-dracula.js";
+	import "ace-builds/src-min-noconflict/mode-html.js";
+	import "ace-builds/src-min-noconflict/mode-text.js";
+	import "ace-builds/src-min-noconflict/mode-python.js";
+
+    // Prettier
+    import "prettier/standalone.js";
+
+
     let { children } = $props();
 
     function toggleTheme(e: KeyboardEvent) {
@@ -15,5 +33,9 @@
 </script>
 
 <svelte:document onkeydown={toggleTheme} />
+
+<svelte:head>
+    <script src={scriptSrc}></script>
+</svelte:head>
 
 {@render children()}

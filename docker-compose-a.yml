@@ -14,14 +14,14 @@ services:
     # Add `--pcap-file-continuous` to watch for new pcap in folder.
     command: -r /input_pcaps --pcap-file-continuous
 
-  #frontend:
-  #  build: ./frontend
-  #  restart: always
-  #  volumes:
-  #    - "./input_pcaps:/input_pcaps:ro" # remove to prevent users from downloading pcaps
-  #    - "./suricata/output:/suricata/output:rw"
-  #  ports:
-  #    - 0.0.0.0:3000:3000
+  frontend:
+    build: ./frontend
+    restart: always
+    volumes:
+      - "./input_pcaps:/input_pcaps:ro" # remove to prevent users from downloading pcaps
+      - "./suricata/output:/suricata/output:ro"
+    ports:
+      - 0.0.0.0:3000:3000
 
   postgres:
     image: postgres:alpine

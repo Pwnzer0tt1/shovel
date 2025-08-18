@@ -7,7 +7,7 @@ import fs from "node:fs";
  * @param path Path of the file containing services config.
  * @returns CtfConfig
  */
-export function loadConfig(path = "./services_config.json") {
+export function loadConfig(path = "./ctf_config.json") {
     if (!fs.existsSync(path)) {
         let end_date = new Date();
         end_date.setTime(end_date.getTime() + 8 * 60 * 60 * 1000)
@@ -43,7 +43,7 @@ export function loadConfig(path = "./services_config.json") {
  * @param data Config to save in the file.
  * @param path Path where to save the file.
  */
-export function saveConfig(data: CtfConfig, path = "./services_config.json") {
+export function saveConfig(data: CtfConfig, path = "./ctf_config.json") {
     try {
         fs.writeFileSync(path, JSON.stringify(data));
     }

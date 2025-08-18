@@ -28,8 +28,6 @@ services:
       - "./services_config.json:/webapp/services_config.json:rw"
     ports:
       - 0.0.0.0:3000:3000
-    env_file:
-      - .env
 
   pcap-broker:
     container_name: pcap-broker-op

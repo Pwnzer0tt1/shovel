@@ -1,9 +1,9 @@
 import { PrismaClient } from "../../generated/prisma/client";
-import { DATABASE_URL } from "$env/static/private";
+import { env } from "$env/dynamic/private";
 
 
 const prisma = new PrismaClient({
-    datasourceUrl: DATABASE_URL
+    datasourceUrl: env.DATABASE_URL ?? "postgresql://postgres@postgres:5432/postgres"
 });
 
 export default prisma;

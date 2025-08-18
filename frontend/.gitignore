@@ -1,5 +1,6 @@
 test-results
 node_modules
+ctf_config.json
 
 # Output
 .output
@@ -15,7 +16,6 @@ Thumbs.db
 
 # Env
 .env
-.env.*
 !.env.example
 !.env.test
 

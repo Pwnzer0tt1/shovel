@@ -10,4 +10,5 @@ README.md
 node_modules
 build
 package
-**/.env
+.env
+ctf_config.json
