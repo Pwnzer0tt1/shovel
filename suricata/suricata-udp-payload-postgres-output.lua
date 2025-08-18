@@ -13,14 +13,9 @@ function setup (args)
     SCLogNotice("Initializing plugin UDP payload PostgreSQL Output; author=ANSSI; license=GPL-2.0")
 
     -- Open database connection
-    pgmoon = require("pgmoon")
-    pg = pgmoon.new({
-        host = "postgres",
-        port = "5432",
-        database = "postgres",
-        user = "postgres"
-    })
-    assert(pg:connect())
+    luasql = require("luasql.postgres")
+    env = assert(luasql.postgres())
+    con = assert(env:connect("postgres", "postgres", "", "postgres"))
 
     -- packer counter for each flow
     flow_pkt_count = {}
@@ -62,7 +57,7 @@ function log (args)
         return
     end
     
-    assert(pg:query("INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES ($1, $2, $3, decode($4, 'hex')) ON CONFLICT (id) DO NOTHING;", flow_id, count, direction, encode_bytea(data)))
+    assert(con:execute(string.format([[INSERT INTO raw (flow_id, count, server_to_client, blob) VALUES (%s, %s, %s, decode('%s', 'hex')) ON CONFLICT (id) DO NOTHING;]], flow_id, count, direction, encode_bytea(data))))
 end
 
 function deinit (args)

@@ -5,12 +5,9 @@ COPY ./ /src/
 RUN RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
 
 
-FROM lua5.1-luarocks-alpine
+FROM alpine:3.22
 RUN apk update
-RUN apk add --no-cache suricata netcat-openbsd libpq-dev gcc musl-dev
-
-RUN luarocks install pgmoon
-RUN luarocks install luasocket
+RUN apk add --no-cache suricata netcat-openbsd libpq-dev lua5.1-sql-postgres
 
 COPY . /suricata
 COPY --from=builder /src/target/release/libeve_postgres_output.so /suricata/
